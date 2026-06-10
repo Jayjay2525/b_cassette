@@ -9,7 +9,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(86400 * 5),
             photos: mockPhotos(count: 23),
             keywords: ["summer", "film", "friends"],
-            design: .nr,
+            design: .d1,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -19,7 +19,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 2),
             photos: mockPhotos(count: 41),
             keywords: ["night", "city"],
-            design: .art,
+            design: .d2,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -29,7 +29,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(86400 * 20),
             photos: mockPhotos(count: 12),
             keywords: ["travel"],
-            design: .chf90,
+            design: .d3,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -39,7 +39,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(86400 * 10),
             photos: mockPhotos(count: 31),
             keywords: ["daily"],
-            design: .art,
+            design: .d2,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -49,7 +49,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(86400 * 3),
             photos: mockPhotos(count: 18),
             keywords: ["concert"],
-            design: .chf90,
+            design: .d3,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -59,7 +59,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 10),
             photos: mockPhotos(count: 27, daysAgo: 50),
             keywords: ["winter", "snow"],
-            design: .nr,
+            design: .d1,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -69,7 +69,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 20),
             photos: mockPhotos(count: 33, daysAgo: 65),
             keywords: ["road trip"],
-            design: .art,
+            design: .d2,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -79,7 +79,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 30),
             photos: mockPhotos(count: 15, daysAgo: 95),
             keywords: ["family"],
-            design: .chf90,
+            design: .d3,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -89,7 +89,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 50),
             photos: mockPhotos(count: 48, daysAgo: 125),
             keywords: ["spring"],
-            design: .nr,
+            design: .d1,
             printProgress: 1.0
         ),
         CassetteModel(
@@ -99,7 +99,7 @@ enum MockData {
             expiresAt: Date().addingTimeInterval(-86400 * 80),
             photos: mockPhotos(count: 22, daysAgo: 185),
             keywords: ["festival", "music"],
-            design: .art,
+            design: .d2,
             printProgress: 1.0
         )
     ]

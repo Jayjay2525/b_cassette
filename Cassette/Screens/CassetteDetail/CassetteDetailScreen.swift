@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Photos
 
 struct CassetteDetailScreen: View {
     @Environment(\.dismiss) var dismiss
@@ -251,8 +252,7 @@ struct CassetteDetailScreen: View {
                 } else {
                     HStack(spacing: gap) {
                         ForEach(bCuts) { photo in
-                            Color.appGray
-                                .frame(width: photoWidth, height: photoHeight)
+                            BCutImageView(source: photo.imageSource, width: photoWidth, height: photoHeight)
                         }
                     }
                     .offset(x: filmOffset(screenWidth: geo.size.width, totalFilmWidth: totalFilmWidth))

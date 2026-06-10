@@ -155,6 +155,15 @@ struct MainScreen: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
             }
+            .onChange(of: appState.cassettes.count) { _, count in
+                if count == 0 {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        circleActive = false
+                        panelMode = .overall
+                        selectedCassette = nil
+                    }
+                }
+            }
             .navigationDestination(isPresented: $navigateToDetail) {
                 if let cassette = selectedCassette {
                     CassetteDetailScreen(cassette: cassette)

@@ -1,17 +1,17 @@
-//
-//  ContentView.swift
-//  Cassette
-//
-//  Created by Colin on 6/8/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @AppStorage("onboardingComplete") private var onboardingComplete = false
 
     var body: some View {
-        MainScreen()
+        if onboardingComplete {
+            MainScreen()
+        } else {
+            OnboardingScreen {
+                onboardingComplete = true
+            }
+        }
     }
 }
 

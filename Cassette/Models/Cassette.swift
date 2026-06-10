@@ -51,9 +51,15 @@ struct BCutPhoto: Identifiable {
 // MARK: - CassetteDesign
 
 enum CassetteDesign: String, CaseIterable {
-    case art = "cassette_art"
-    case chf90 = "cassette_chf90"
-    case nr = "cassette_nr"
+    case d1 = "cassette_1"
+    case d2 = "cassette_2"
+    case d3 = "cassette_3"
+    case d4 = "cassette_4"
+    case d5 = "cassette_5"
+    case d6 = "cassette_6"
+    case d7 = "cassette_7"
+    case d8 = "cassette_8"
+    case d9 = "cassette_9"
 
     var imageName: String { rawValue }
 }
@@ -61,7 +67,7 @@ enum CassetteDesign: String, CaseIterable {
 // MARK: - App State
 
 class AppState: ObservableObject {
-    @Published var cassettes: [CassetteModel] = Array(MockData.cassettes.prefix(6))
+    @Published var cassettes: [CassetteModel] = []
     @Published var selectedCassetteID: UUID? = nil
 
     var isFull: Bool { cassettes.count >= AppConstants.maxCassettes }

@@ -1,5 +1,4 @@
 import SwiftUI
-import Photos
 
 struct SelectDetailScreen: View {
     @EnvironmentObject var appState: AppState
@@ -7,6 +6,7 @@ struct SelectDetailScreen: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var showExitAlert: Bool = false
+    @State private var navigateToDesign: Bool = false
     @State private var keywordInput: String = ""
     @State private var isEditingName: Bool = false
     @FocusState private var nameFieldFocused: Bool
@@ -117,7 +117,7 @@ struct SelectDetailScreen: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(cassetteData.selectedPhotos) { photo in
-                                FilmPhotoThumb(photo: photo, height: 160)
+                                BCutImageView(source: photo.imageSource, width: 120, height: 160)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -136,19 +136,34 @@ struct SelectDetailScreen: View {
 
                 VStack(spacing: 10) {
                     ForEach(cassetteData.keywords, id: \.self) { kw in
-                        HStack {
-                            Spacer()
-                            Text(kw)
-                                .font(.cutiveMono(16))
-                                .foregroundColor(.appBlack)
-                            Spacer()
+                        HStack(spacing: 8) {
+                            HStack {
+                                Spacer()
+                                Text(kw)
+                                    .font(.cutiveMono(16))
+                                    .foregroundColor(.appBlack)
+                                Spacer()
+                            }
+                            .frame(maxWidth: 180)
+                            .frame(height: 42)
+                            .background(Capsule().fill(Color.appGray.opacity(0.5)))
+                            .onTapGesture {
+                                keywordInput = kw
+                                cassetteData.keywords.removeAll { $0 == kw }
+                                keywordFieldFocused = true
+                            }
+
+                            Button {
+                                cassetteData.keywords.removeAll { $0 == kw }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.appGray)
+                            }
                         }
-                        .frame(maxWidth: 180)
-                        .frame(height: 42)
-                        .background(Capsule().fill(Color.appGray.opacity(0.5)))
                     }
 
-                    if cassetteData.keywords.count < 3 {
+                    if cassetteData.keywords.count < 2 {
                         HStack {
                             TextField("add keyword", text: $keywordInput)
                                 .font(.cutiveMono(16))
@@ -182,24 +197,29 @@ struct SelectDetailScreen: View {
 
         // ── 7. Next 버튼 (ZStack 최상단 고정) ──
         VStack(spacing: 0) {
-            NavigationLink {
-                SelectDesignScreen()
-                    .environmentObject(appState)
-                    .environmentObject(cassetteData)
+            Button {
+                if cassetteData.name.isEmpty {
+                    cassetteData.name = "cassette \(appState.cassettes.count + 1)"
+                }
+                navigateToDesign = true
             } label: {
                 Text("next")
                     .font(.cutiveMono(18))
                     .foregroundColor(.appWhite)
                     .frame(width: 183, height: 48)
                     .background(Capsule().fill(Color(hex: "#555555")))
-                    .opacity(cassetteData.name.isEmpty ? 0.4 : 1.0)
             }
-            .disabled(cassetteData.name.isEmpty)
+            .navigationDestination(isPresented: $navigateToDesign) {
+                SelectDesignScreen()
+                    .environmentObject(appState)
+                    .environmentObject(cassetteData)
+            }
             Spacer().frame(height: 41)
         }
         .frame(maxWidth: .infinity)
         .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
         } // ZStack 닫기
+        .ignoresSafeArea(.keyboard)
         .navigationBarHidden(true)
         .onTapGesture { hideKeyboard() }
         .alert("discard cassette?", isPresented: $showExitAlert) {
@@ -212,7 +232,7 @@ struct SelectDetailScreen: View {
 
     private func addKeyword() {
         let kw = keywordInput.trimmingCharacters(in: .whitespaces)
-        guard !kw.isEmpty, !cassetteData.keywords.contains(kw), cassetteData.keywords.count < 3 else { return }
+        guard !kw.isEmpty, !cassetteData.keywords.contains(kw), cassetteData.keywords.count < 2 else { return }
         cassetteData.keywords.append(kw)
         keywordInput = ""
     }
@@ -222,45 +242,3 @@ struct SelectDetailScreen: View {
     }
 }
 
-// MARK: - 필름 스트립 썸네일
-
-struct FilmPhotoThumb: View {
-    let photo: BCutPhoto
-    let height: CGFloat
-
-    @State private var image: UIImage? = nil
-
-    var width: CGFloat { height * 0.75 }
-
-    var body: some View {
-        Group {
-            if let img = image {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Color.appGray.opacity(0.3)
-            }
-        }
-        .frame(width: width, height: height)
-        .clipped()
-        .onAppear { loadImage() }
-    }
-
-    private func loadImage() {
-        if case .asset(let id) = photo.imageSource {
-            let result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
-            guard let asset = result.firstObject else { return }
-            let size = CGSize(width: width * 3, height: height * 3)
-            let opts = PHImageRequestOptions()
-            opts.deliveryMode = .opportunistic
-            opts.isNetworkAccessAllowed = true
-            PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: opts) { img, _ in
-                if let img { DispatchQueue.main.async { image = img } }
-            }
-        } else if case .file(let url) = photo.imageSource,
-                  let img = UIImage(contentsOfFile: url.path) {
-            image = img
-        }
-    }
-}
