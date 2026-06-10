@@ -6,20 +6,16 @@ struct SelectBCutsScreen: View {
     @EnvironmentObject var cassetteData: NewCassetteData
     @Environment(\.dismiss) var dismiss
 
+    @State private var showExitAlert: Bool = false
+    @State private var isGridMode: Bool = false
     @State private var assets: [PHAsset] = []
     @State private var currentIndex: Int = 0
     @State private var dragX: CGFloat = 0
-    @State private var flyUpOffset: CGFloat = 0
-    @State private var isFlying: Bool = false
     @State private var authStatus: PHAuthorizationStatus = .notDetermined
-    @State private var lockedDirection: GestureDirection = .none
-
-    enum GestureDirection { case none, horizontal, vertical }
 
     private let mainWidth: CGFloat = 297
     private let sideWidth: CGFloat = 259
     private let cardSpacing: CGFloat = 12
-    private let swipeUpThreshold: CGFloat = 80
 
     private let fmt: DateFormatter = {
         let f = DateFormatter()
@@ -42,6 +38,7 @@ struct SelectBCutsScreen: View {
     }
 
     var body: some View {
+        ZStack(alignment: .bottom) {
         VStack(spacing: 0) {
 
             // ── 1. Navbar ──
@@ -52,7 +49,7 @@ struct SelectBCutsScreen: View {
                     .font(.cutiveMono(20))
                     .foregroundColor(.appBlack)
                 Spacer()
-                Button { cassetteData.shouldDismiss = true } label: {
+                Button { showExitAlert = true } label: {
                     Image("button_x")
                         .resizable().scaledToFit()
                         .frame(width: 24, height: 24)
@@ -62,146 +59,133 @@ struct SelectBCutsScreen: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            // ── 2. Photo ZStack ──
-            ZStack {
-                Image("arrow_bcut")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 48)
-                    .offset(y: -80)
-
+            // ── 2. 메인 영역 (캐러셀 or 그리드) ──
+            if isGridMode {
+                // ── 그리드 모드 ──
+                if assets.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3),
+                            spacing: 2
+                        ) {
+                            ForEach(assets, id: \.localIdentifier) { asset in
+                                let selected = isBCutSelected(asset)
+                                GridPhotoCell(asset: asset, isSelected: selected)
+                                    .onTapGesture { toggleGridSelection(asset) }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 100)
+                    }
+                }
+            } else {
+                // ── 캐러셀 모드 ──
                 if assets.isEmpty {
                     emptyState
                 } else {
                     GeometryReader { geo in
-                        let cardHeight = mainWidth * 1.3
-                        let topPadding = (geo.size.height - cardHeight) / 2
+                        let cardHeight = mainWidth * (343.0 / 259.0)
+                        let topPadding = max(0, (geo.size.height - cardHeight) / 2 - 50)
                         let offset = carouselOffset(centerX: geo.size.width / 2) + dragX
+
                         HStack(spacing: cardSpacing) {
                             ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { idx, asset in
                                 let isMain = idx == currentIndex
                                 BCutPhotoCard(
                                     asset: asset,
                                     width: isMain ? mainWidth : sideWidth,
-                                    verticalOffset: isMain ? flyUpOffset : 0,
-                                    isSelected: false
+                                    verticalOffset: 0,
+                                    isSelected: isBCutSelected(asset)
                                 )
+                                .onTapGesture {
+                                    if isMain { toggleGridSelection(asset) }
+                                }
                             }
                         }
-                        .offset(x: offset, y: max(0, topPadding))
+                        .offset(x: offset, y: topPadding)
                         .gesture(
                             DragGesture(minimumDistance: 12)
                                 .onChanged { v in
-                                    guard !isFlying else { return }
-
-                                    if lockedDirection == .none {
-                                        if abs(v.translation.height) > abs(v.translation.width) {
-                                            lockedDirection = v.translation.height < 0 ? .vertical : .none
-                                        } else {
-                                            lockedDirection = .horizontal
-                                        }
-                                    }
-
-                                    switch lockedDirection {
-                                    case .vertical:
-                                        flyUpOffset = min(0, v.translation.height)
-                                    case .horizontal:
+                                    if abs(v.translation.width) > abs(v.translation.height) {
                                         dragX = v.translation.width
-                                    case .none:
-                                        break
                                     }
                                 }
                                 .onEnded { v in
-                                    defer { lockedDirection = .none }
-                                    guard !isFlying else {
-                                        flyUpOffset = 0; dragX = 0; return
-                                    }
-
-                                    switch lockedDirection {
-                                    case .vertical:
-                                        if v.translation.height < -CGFloat(swipeUpThreshold) && !isAtLimit {
-                                            selectCurrentAsBCut()
-                                        } else {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                                flyUpOffset = 0
-                                            }
-                                        }
-                                    case .horizontal:
-                                        flyUpOffset = 0
-                                        let threshold: CGFloat = 50
-                                        if v.translation.width < -threshold && currentIndex < assets.count - 1 {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                                currentIndex += 1; dragX = 0
-                                            }
-                                        } else if v.translation.width > threshold && currentIndex > 0 {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                                currentIndex -= 1; dragX = 0
-                                            }
-                                        } else {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                                dragX = 0
-                                            }
-                                        }
-                                    case .none:
-                                        flyUpOffset = 0; dragX = 0
+                                    let threshold: CGFloat = 50
+                                    if v.translation.width < -threshold && currentIndex < assets.count - 1 {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { currentIndex += 1; dragX = 0 }
+                                    } else if v.translation.width > threshold && currentIndex > 0 {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { currentIndex -= 1; dragX = 0 }
+                                    } else {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { dragX = 0 }
                                     }
                                 }
                         )
+
+                        // ── 날짜 ──
+                        Text(currentDateString)
+                            .font(.cutiveMono(16))
+                            .foregroundColor(.appDarkGray)
+                            .frame(maxWidth: .infinity)
+                            .offset(y: topPadding + cardHeight + 16)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // ── 3. 날짜 ──
-            Text(currentDateString)
-                .font(.cutiveMono(14))
-                .foregroundColor(.appGray)
-                .padding(.vertical, 16)
-
-            // ── 4. Control Bar ──
-            HStack {
-                Button { } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.appWhite)
-                            .frame(width: 48, height: 48)
-                        Image("button_gridLayout")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 24, height: 24)
-                    }
-                }
-
-                Spacer()
-
-                NavigationLink {
-                    SelectDetailScreen()
-                        .environmentObject(appState)
-                        .environmentObject(cassetteData)
-                } label: {
-                    Text("next")
-                        .font(.cutiveMono(18))
-                        .foregroundColor(.appWhite)
-                        .frame(width: 183, height: 48)
-                        .background(Capsule().fill(Color(hex: "#555555")))
-                        .opacity(cassetteData.selectedPhotos.isEmpty ? 0.4 : 1.0)
-                }
-                .disabled(cassetteData.selectedPhotos.isEmpty)
-
-                Spacer()
-
-                Text("\(cassetteData.selectedPhotos.count)/\(AppConstants.maxBCuts)")
-                    .font(.cutiveMono(13))
-                    .foregroundColor(isAtLimit ? .appAccent : .appBlack)
-                    .frame(width: 48, height: 48)
-                    .overlay(Circle().stroke(isAtLimit ? Color.appAccent : Color.appGray, lineWidth: 1))
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
         }
         .background(Color.appBackground.ignoresSafeArea())
+
+        // ── 4. Control Bar (ZStack 최상단 고정) ──
+        HStack {
+            Button { withAnimation(.easeInOut(duration: 0.2)) { isGridMode.toggle() } } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color.appWhite)
+                        .frame(width: 48, height: 48)
+                    Image(isGridMode ? "button_oneLayout" : "button_gridLayout")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                }
+            }
+
+            Spacer()
+
+            NavigationLink {
+                SelectDetailScreen()
+                    .environmentObject(appState)
+                    .environmentObject(cassetteData)
+            } label: {
+                Text("next")
+                    .font(.cutiveMono(18))
+                    .foregroundColor(.appWhite)
+                    .frame(width: 183, height: 48)
+                    .background(Capsule().fill(Color(hex: "#555555")))
+                    .opacity(cassetteData.selectedPhotos.isEmpty ? 0.4 : 1.0)
+            }
+            .disabled(cassetteData.selectedPhotos.isEmpty)
+
+            Spacer()
+
+            Text("\(cassetteData.selectedPhotos.count)/\(AppConstants.maxBCuts)")
+                .font(.cutiveMono(13))
+                .foregroundColor(isAtLimit ? .appAccent : .appBlack)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(Color.appWhite))
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 41)
+        } // ZStack 닫기
         .navigationBarHidden(true)
         .onAppear { requestPhotoAccess() }
+        .alert("discard cassette?", isPresented: $showExitAlert) {
+            Button("discard", role: .destructive) { cassetteData.shouldDismiss = true }
+            Button("cancel", role: .cancel) { }
+        } message: {
+            Text("your selections will not be saved.")
+        }
     }
 
     // MARK: - Empty / Auth state
@@ -242,15 +226,13 @@ struct SelectBCutsScreen: View {
         })
     }
 
-    func selectCurrentAsBCut() {
-        guard let asset = currentAsset, !isAtLimit, !isFlying else { return }
-
-        let indexToRemove = currentIndex
-        isFlying = true
-
-        withAnimation(.easeIn(duration: 0.25)) {
-            flyUpOffset = -800
-        } completion: {
+    func toggleGridSelection(_ asset: PHAsset) {
+        if isBCutSelected(asset) {
+            cassetteData.selectedPhotos.removeAll {
+                if case .asset(let id) = $0.imageSource { return id == asset.localIdentifier }
+                return false
+            }
+        } else if !isAtLimit {
             let photo = BCutPhoto(
                 id: UUID(),
                 imageSource: .asset(asset.localIdentifier),
@@ -258,25 +240,9 @@ struct SelectBCutsScreen: View {
                 takenAt: asset.creationDate ?? Date()
             )
             cassetteData.selectedPhotos.append(photo)
-
-            var removeTx = Transaction()
-            removeTx.disablesAnimations = true
-            withTransaction(removeTx) {
-                if indexToRemove < assets.count {
-                    assets.remove(at: indexToRemove)
-                }
-                if currentIndex >= assets.count && currentIndex > 0 {
-                    currentIndex -= 1
-                }
-            }
-
-            var tx = Transaction()
-            tx.disablesAnimations = true
-            withTransaction(tx) { flyUpOffset = 0 }
-
-            isFlying = false
         }
     }
+
 
     func requestPhotoAccess() {
         let current = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -295,6 +261,7 @@ struct SelectBCutsScreen: View {
     }
 
     func loadPhotos() {
+        guard assets.isEmpty else { return }  // 이미 로드됐으면 스킵
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.fetchLimit = 200
@@ -302,6 +269,57 @@ struct SelectBCutsScreen: View {
         var loaded: [PHAsset] = []
         result.enumerateObjects { asset, _, _ in loaded.append(asset) }
         DispatchQueue.main.async { assets = loaded }
+    }
+}
+
+// MARK: - Grid Cell
+
+struct GridPhotoCell: View {
+    let asset: PHAsset
+    let isSelected: Bool
+
+    @State private var image: UIImage? = nil
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    if let img = image {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.appGray.opacity(0.3)
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
+
+                if isSelected {
+                    ZStack {
+                        Circle().fill(Color.appBlack).frame(width: 22, height: 22)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(6)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
+        }
+        .aspectRatio(3/4, contentMode: .fit)
+        .onAppear { loadImage() }
+    }
+
+    func loadImage() {
+        let size = CGSize(width: 300, height: 300)
+        let opts = PHImageRequestOptions()
+        opts.deliveryMode = .opportunistic
+        opts.isNetworkAccessAllowed = true
+        PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: opts) { img, _ in
+            if let img { DispatchQueue.main.async { image = img } }
+        }
     }
 }
 
@@ -315,7 +333,7 @@ struct BCutPhotoCard: View {
 
     @State private var image: UIImage? = nil
 
-    var cardHeight: CGFloat { width * 1.3 }
+    var cardHeight: CGFloat { width * (343.0 / 259.0) }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {

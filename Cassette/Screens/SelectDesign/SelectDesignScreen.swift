@@ -8,6 +8,8 @@ struct SelectDesignScreen: View {
     // sheet dismiss를 위해 루트까지 올라가야 함
     @Environment(\.dismiss) var dismissSheet
 
+    @State private var showExitAlert: Bool = false
+
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.appBackground.ignoresSafeArea()
@@ -25,7 +27,7 @@ struct SelectDesignScreen: View {
                         .font(.cutiveMono(14))
                         .foregroundColor(.appGray)
                     Spacer()
-                    Button { cassetteData.shouldDismiss = true } label: {
+                    Button { showExitAlert = true } label: {
                         Image("button_x")
                             .resizable().scaledToFit()
                             .frame(width: 24, height: 24)
@@ -55,35 +57,38 @@ struct SelectDesignScreen: View {
                         }
                     }
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 100)
                 }
             }
 
-            // 하단 Done 버튼
+            // ── Done 버튼 (ZStack 최상단 고정) ──
             VStack(spacing: 0) {
-                Divider()
                 Button {
                     let newCassette = cassetteData.buildCassette()
                     appState.addCassette(newCassette)
-                    // sheet 전체 닫기
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         dismissSheet()
                     }
                 } label: {
-                    HStack {
-                        Spacer()
-                        Text("done →")
-                            .font(.cutiveMono(16))
-                            .foregroundColor(.appBlack)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
+                    Text("done")
+                        .font(.cutiveMono(18))
+                        .foregroundColor(.appWhite)
+                        .frame(width: 183, height: 48)
+                        .background(Capsule().fill(Color(hex: "#555555")))
                 }
+                Spacer().frame(height: 41)
             }
-            .background(Color.appBackground)
+            .frame(maxWidth: .infinity)
+            .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
         }
         .navigationBarHidden(true)
+        .alert("discard cassette?", isPresented: $showExitAlert) {
+            Button("discard", role: .destructive) { cassetteData.shouldDismiss = true }
+            Button("cancel", role: .cancel) { }
+        } message: {
+            Text("your selections will not be saved.")
+        }
     }
 }
 
