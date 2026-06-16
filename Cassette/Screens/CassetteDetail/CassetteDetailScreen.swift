@@ -14,6 +14,7 @@ struct CassetteDetailScreen: View {
     @State private var showKeywords: Bool = false
     @State private var playProgress: Double = 0.0
     @State private var showDeleteAlert: Bool = false
+    @State private var showRevertAlert: Bool = false
     @State private var player: AVAudioPlayer? = nil
 
     // MARK: - Timer
@@ -111,6 +112,16 @@ struct CassetteDetailScreen: View {
         .onDisappear {
             player?.stop()
             isPlaying = false
+        }
+        .alert("restore photos", isPresented: $showRevertAlert) {
+            Button("open photos") {
+                if let url = URL(string: "photos-redirect://") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("cancel", role: .cancel) {}
+        } message: {
+            Text("photos deleted within 30 days can be recovered.\ngo to Photos → Recently Deleted to restore them.")
         }
         .alert("Delete Cassette", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -318,7 +329,7 @@ struct CassetteDetailScreen: View {
             // Revert
             Spacer()
             Button {
-                // TODO: revert B-cuts
+                showRevertAlert = true
             } label: {
                 Text("revert")
                     .font(.cutiveMono(18))

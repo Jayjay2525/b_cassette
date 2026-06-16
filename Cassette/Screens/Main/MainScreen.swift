@@ -17,6 +17,7 @@ struct MainScreen: View {
     @State private var selectedCassette: CassetteModel? = nil
     @State private var navigateToDetail = false
     @State private var showNewCassette = false
+    @State private var showDeleteAlert = false
 
     let dragThreshold: CGFloat = 160
     let swipeRightThreshold: CGFloat = 120
@@ -149,18 +150,25 @@ struct MainScreen: View {
                         mainCassette: circleActive ? (selectedCassette ?? mainCassette) : mainCassette,
                         circleActive: circleActive,
                         onMenuTap: onMenuTap,
-                        onAddTap: { showNewCassette = true }
+                        onAddTap: { showNewCassette = true },
+                        onDeleteCassette: { showDeleteAlert = true }
                     )
                     .opacity((1 - swipeRightProgress) * (circleActive ? (1 - abs(dragProgress) * 0.7) : 1))
                 }
                 .ignoresSafeArea(edges: .bottom)
             }
-            .onChange(of: appState.cassettes.count) { _, count in
+            .onChange(of: appState.cassettes.count) { oldCount, count in
                 if count == 0 {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         circleActive = false
                         panelMode = .overall
                         selectedCassette = nil
+                    }
+                } else if count > oldCount, let newest = appState.cassettes.last {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        selectedCassette = newest
+                        circleActive = true
+                        panelMode = .cassette
                     }
                 }
             }
@@ -172,6 +180,16 @@ struct MainScreen: View {
             .sheet(isPresented: $showNewCassette) {
                 NewCassetteScreen()
                     .environmentObject(appState)
+            }
+            .alert("delete cassette?", isPresented: $showDeleteAlert) {
+                Button("delete", role: .destructive) {
+                    if let cassette = selectedCassette {
+                        appState.deleteCassette(id: cassette.id)
+                    }
+                }
+                Button("cancel", role: .cancel) {}
+            } message: {
+                Text("this cassette and all its photos will be permanently deleted.")
             }
         }
     }
@@ -433,6 +451,7 @@ struct UILayer: View {
     let circleActive: Bool
     let onMenuTap: () -> Void
     let onAddTap: () -> Void
+    var onDeleteCassette: (() -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -520,9 +539,22 @@ struct UILayer: View {
                 }
             }
 
-            // 하단 정보 패널
+            // 하단 정보 패널 + delete 버튼
             VStack {
                 Spacer()
+                // delete 버튼 (cassette 모드일 때만, 패널 바로 위 우측)
+                if panelMode == .cassette {
+                    HStack {
+                        Spacer()
+                        Button("delete") { onDeleteCassette?() }
+                            .font(.cutiveMono(18))
+                            .foregroundColor(.appAccent)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .opacity(panelVisible ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.25), value: panelVisible)
+                }
                 BottomInfoPanel(
                     cassettes: appState.cassettes,
                     mainCassette: mainCassette,
