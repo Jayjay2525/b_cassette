@@ -11,7 +11,7 @@ enum MockData {
             keywords: ["summer", "film", "friends"],
             design: .d1,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(  
             id: UUID(),
@@ -22,7 +22,7 @@ enum MockData {
             keywords: ["night", "city"],
             design: .d2,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -33,7 +33,7 @@ enum MockData {
             keywords: ["travel"],
             design: .d3,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -44,7 +44,7 @@ enum MockData {
             keywords: ["daily"],
             design: .d2,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -55,7 +55,7 @@ enum MockData {
             keywords: ["concert"],
             design: .d3,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -66,7 +66,7 @@ enum MockData {
             keywords: ["winter", "snow"],
             design: .d1,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -77,7 +77,7 @@ enum MockData {
             keywords: ["road trip"],
             design: .d2,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -88,7 +88,7 @@ enum MockData {
             keywords: ["family"],
             design: .d3,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -99,7 +99,7 @@ enum MockData {
             keywords: ["spring"],
             design: .d1,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         ),
         CassetteModel(
             id: UUID(),
@@ -110,7 +110,7 @@ enum MockData {
             keywords: ["festival", "music"],
             design: .d2,
             printProgress: 1.0,
-            trackName: "sound_\(Int.random(in: 1...12)).mp3"
+            trackName: NewCassetteData.randomTrackName()
         )
     ]
 

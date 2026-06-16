@@ -13,9 +13,13 @@ class NewCassetteData: ObservableObject {
     private static let trackList: [(name: String, ext: String)] = [
         ("sound_1", "mp3"), ("sound_2", "mp3"), ("sound_3", "mp3"),
         ("sound_4", "mp3"), ("sound_5", "mp3"), ("sound_6", "mp3"),
-        ("sound_7", "mp3"), ("sound_8", "mp3"), ("sound_9", "m4a"),
-        ("sound_10", "m4a"), ("sound_11", "m4a"), ("sound_12", "mp3")
+        ("sound_7", "mp3"), ("sound_8", "mp3"), ("sound_9", "mp3")
     ]
+
+    static func randomTrackName() -> String {
+        let track = trackList.randomElement()!
+        return "\(track.name).\(track.ext)"
+    }
 
     func buildCassette() -> CassetteModel {
         let track = Self.trackList.randomElement()!

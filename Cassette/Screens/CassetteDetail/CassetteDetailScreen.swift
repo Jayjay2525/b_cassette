@@ -270,8 +270,14 @@ struct CassetteDetailScreen: View {
         let components = cassette.trackName.components(separatedBy: ".")
         guard components.count == 2,
               let url = Bundle.main.url(forResource: components[0], withExtension: components[1]) else { return }
-        player = try? AVAudioPlayer(contentsOf: url)
-        player?.prepareToPlay()
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.prepareToPlay()
+        } catch {
+            print("audio setup error: \(error)")
+        }
     }
 
     // MARK: - Film Strip
