@@ -163,9 +163,9 @@ struct SelectBCutsScreen: View {
                     .foregroundColor(.appWhite)
                     .frame(width: 183, height: 48)
                     .background(Capsule().fill(Color(hex: "#555555")))
-                    .opacity(cassetteData.selectedPhotos.isEmpty ? 0.4 : 1.0)
+                    .opacity(cassetteData.selectedPhotos.count < 5 ? 0.4 : 1.0)
             }
-            .disabled(cassetteData.selectedPhotos.isEmpty)
+            .disabled(cassetteData.selectedPhotos.count < 5)
 
             Spacer()
 
@@ -177,6 +177,17 @@ struct SelectBCutsScreen: View {
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 41)
+        .overlay(alignment: .top) {
+            if cassetteData.selectedPhotos.count < 5 {
+                Text("select at least 5 images!")
+                    .font(.cutiveMono(14))
+                    .foregroundColor(Color(hex: "#FF0000"))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
+                    .offset(y: -26)
+            }
+        }
         } // ZStack 닫기
         .navigationBarHidden(true)
         .onAppear { requestPhotoAccess() }

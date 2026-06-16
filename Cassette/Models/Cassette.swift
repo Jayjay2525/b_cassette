@@ -13,6 +13,7 @@ struct CassetteModel: Identifiable {
     var keywords: [String]
     var design: CassetteDesign
     var printProgress: Double  // 0.0 → 1.0 (현상 애니메이션)
+    var trackName: String      // 로컬 사운드 파일 이름 (확장자 포함)
 
     var daysLeft: Int {
         let diff = Calendar.current.dateComponents([.day], from: Date(), to: expiresAt).day ?? 0

@@ -7,7 +7,6 @@ struct SelectDesignScreen: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var showExitAlert = false
-    @State private var showDeleteAlert = false
     @State private var isSaving = false
     @State private var originalIdentifiers: [String] = []
     @State private var currentIndex: Int = 0
@@ -130,7 +129,14 @@ struct SelectDesignScreen: View {
                         let newCassette = cassetteData.buildCassette()
                         appState.addCassette(newCassette)
                         isSaving = false
-                        showDeleteAlert = true
+                        let ids = originalIdentifiers
+                        cassetteData.shouldDismiss = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+                            var assets: [PHAsset] = []
+                            result.enumerateObjects { asset, _, _ in assets.append(asset) }
+                            appState.deleteFromPhotos(assets: assets) { _ in }
+                        }
                     }
                 } label: {
                     Group {
@@ -161,23 +167,6 @@ struct SelectDesignScreen: View {
             Button("cancel", role: .cancel) { }
         } message: {
             Text("your selections will not be saved.")
-        }
-        .alert("delete from photos?", isPresented: $showDeleteAlert) {
-            Button("delete", role: .destructive) {
-                let ids = originalIdentifiers
-                cassetteData.shouldDismiss = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
-                    var assets: [PHAsset] = []
-                    result.enumerateObjects { asset, _, _ in assets.append(asset) }
-                    appState.deleteFromPhotos(assets: assets) { _ in }
-                }
-            }
-            Button("keep", role: .cancel) {
-                cassetteData.shouldDismiss = true
-            }
-        } message: {
-            Text("your b-cuts are saved in cassette.\nremove them from the photos app?")
         }
     }
 

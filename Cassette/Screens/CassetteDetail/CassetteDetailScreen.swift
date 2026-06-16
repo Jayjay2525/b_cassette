@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import Photos
+import AVFoundation
 
 struct CassetteDetailScreen: View {
     @Environment(\.dismiss) var dismiss
@@ -9,14 +10,17 @@ struct CassetteDetailScreen: View {
 
     // MARK: - State
     @State private var isPlaying: Bool = false
+    @State private var cassettePressed: Bool = false
+    @State private var showKeywords: Bool = false
     @State private var playProgress: Double = 0.0
     @State private var showDeleteAlert: Bool = false
+    @State private var player: AVAudioPlayer? = nil
 
     // MARK: - Timer
     private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
 
     // MARK: - Constants
-    private let totalDuration: Double = 199  // 3:19
+    private var totalDuration: Double { player?.duration ?? 0 }
     private let filmPhotoWidth: CGFloat = 120
     private let filmPhotoHeight: CGFloat = 160
     private let filmStripHeight: CGFloat = 228
@@ -93,16 +97,20 @@ struct CassetteDetailScreen: View {
         }
         .navigationBarHidden(true)
         .onReceive(timer) { _ in
-            guard isPlaying else { return }
-            let step = 0.05 / totalDuration
-            if playProgress < 1.0 {
+            guard isPlaying, let player else { return }
+            if player.isPlaying {
                 withAnimation(.linear(duration: 0.05)) {
-                    playProgress = min(1.0, playProgress + step)
+                    playProgress = player.currentTime / player.duration
                 }
             } else {
                 isPlaying = false
                 playProgress = 0.0
             }
+        }
+        .onAppear { setupPlayer() }
+        .onDisappear {
+            player?.stop()
+            isPlaying = false
         }
         .alert("Delete Cassette", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
@@ -147,12 +155,36 @@ struct CassetteDetailScreen: View {
 
     private var cassetteZStack: some View {
         ZStack {
-            // 추후: roll+film 레이어 (아래)
-            // 현재: cassette design 이미지만
             Image(cassette.design.imageName)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 320)
+
+            // 키워드 오버레이
+            if showKeywords && !cassette.keywords.isEmpty {
+                Color(hex: "#D9D9D9").opacity(0.8)
+                    .frame(width: 320)
+                    .overlay(
+                        FlowLayout(spacing: 10, keywords: cassette.keywords)
+                    )
+                    .transition(.opacity)
+            }
+        }
+        .scaleEffect(cassettePressed ? 0.9 : 1.0)
+        .onTapGesture {
+            // 이미 보이면 닫기
+            if showKeywords {
+                withAnimation(.easeInOut(duration: 0.2)) { showKeywords = false }
+                return
+            }
+            // 눌리는 인터랙션 → 키워드 표시
+            withAnimation(.easeInOut(duration: 0.12)) { cassettePressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    cassettePressed = false
+                }
+                withAnimation(.easeInOut(duration: 0.2)) { showKeywords = true }
+            }
         }
     }
 
@@ -184,7 +216,9 @@ struct CassetteDetailScreen: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { v in
-                        playProgress = max(0, min(1, Double(v.location.x / indicatorWidth)))
+                        let ratio = max(0, min(1, Double(v.location.x / indicatorWidth)))
+                        playProgress = ratio
+                        if let player { player.currentTime = ratio * player.duration }
                     }
             )
 
@@ -205,7 +239,13 @@ struct CassetteDetailScreen: View {
     private var playButton: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.15)) {
-                isPlaying.toggle()
+                if isPlaying {
+                    player?.pause()
+                    isPlaying = false
+                } else {
+                    player?.play()
+                    isPlaying = true
+                }
             }
         } label: {
             Image(isPlaying ? "button_stop" : "button_play")
@@ -213,6 +253,14 @@ struct CassetteDetailScreen: View {
                 .scaledToFit()
                 .frame(width: 24, height: 24)
         }
+    }
+
+    private func setupPlayer() {
+        let components = cassette.trackName.components(separatedBy: ".")
+        guard components.count == 2,
+              let url = Bundle.main.url(forResource: components[0], withExtension: components[1]) else { return }
+        player = try? AVAudioPlayer(contentsOf: url)
+        player?.prepareToPlay()
     }
 
     // MARK: - Film Strip
@@ -294,6 +342,39 @@ struct CassetteDetailScreen: View {
                     .clipShape(Capsule())
             }
             Spacer()
+        }
+    }
+}
+
+// MARK: - Keyword Flow Layout
+
+struct FlowLayout: View {
+    let spacing: CGFloat
+    let keywords: [String]
+
+    var body: some View {
+        ZStack {
+            VStack(spacing: spacing) {
+                ForEach(chunked(keywords, size: 2), id: \.self) { row in
+                    HStack(spacing: spacing) {
+                        ForEach(row, id: \.self) { keyword in
+                            Text(keyword)
+                                .font(.cutiveMono(16))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Capsule().fill(Color(hex: "#3D1A1A")))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    private func chunked(_ array: [String], size: Int) -> [[String]] {
+        stride(from: 0, to: array.count, by: size).map {
+            Array(array[$0..<min($0 + size, array.count)])
         }
     }
 }

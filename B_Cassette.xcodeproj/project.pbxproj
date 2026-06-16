@@ -24,18 +24,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3BF1086E2FD6F94200E5B575 /* Cassette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cassette.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3BF1087B2FD6F94400E5B575 /* CassetteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CassetteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3BF108852FD6F94400E5B575 /* CassetteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CassetteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BF1086E2FD6F94200E5B575 /* B_Cassette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = B_Cassette.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3B7630B02FD6FD6500884480 /* Exceptions for "Cassette" folder in "Cassette" target */ = {
+		3B7630B02FD6FD6500884480 /* Exceptions for "Cassette" folder in "B_Cassette" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 3BF1086D2FD6F94200E5B575 /* Cassette */;
+			target = 3BF1086D2FD6F94200E5B575 /* B_Cassette */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -43,7 +43,7 @@
 		3BF108702FD6F94200E5B575 /* Cassette */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3B7630B02FD6FD6500884480 /* Exceptions for "Cassette" folder in "Cassette" target */,
+				3B7630B02FD6FD6500884480 /* Exceptions for "Cassette" folder in "B_Cassette" target */,
 			);
 			path = Cassette;
 			sourceTree = "<group>";
@@ -98,9 +98,9 @@
 		3BF1086F2FD6F94200E5B575 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3BF1086E2FD6F94200E5B575 /* Cassette.app */,
-				3BF1087B2FD6F94400E5B575 /* CassetteTests.xctest */,
-				3BF108852FD6F94400E5B575 /* CassetteUITests.xctest */,
+				3BF1086E2FD6F94200E5B575 /* B_Cassette.app */,
+				3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */,
+				3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,9 +108,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3BF1086D2FD6F94200E5B575 /* Cassette */ = {
+		3BF1086D2FD6F94200E5B575 /* B_Cassette */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3BF1088F2FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "Cassette" */;
+			buildConfigurationList = 3BF1088F2FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_Cassette" */;
 			buildPhases = (
 				3BF1086A2FD6F94200E5B575 /* Sources */,
 				3BF1086B2FD6F94200E5B575 /* Frameworks */,
@@ -123,16 +123,16 @@
 			fileSystemSynchronizedGroups = (
 				3BF108702FD6F94200E5B575 /* Cassette */,
 			);
-			name = Cassette;
+			name = B_Cassette;
 			packageProductDependencies = (
 			);
 			productName = Cassette;
-			productReference = 3BF1086E2FD6F94200E5B575 /* Cassette.app */;
+			productReference = 3BF1086E2FD6F94200E5B575 /* B_Cassette.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3BF1087A2FD6F94400E5B575 /* CassetteTests */ = {
+		3BF1087A2FD6F94400E5B575 /* B_CassetteTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3BF108922FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "CassetteTests" */;
+			buildConfigurationList = 3BF108922FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_CassetteTests" */;
 			buildPhases = (
 				3BF108772FD6F94400E5B575 /* Sources */,
 				3BF108782FD6F94400E5B575 /* Frameworks */,
@@ -146,16 +146,16 @@
 			fileSystemSynchronizedGroups = (
 				3BF1087E2FD6F94400E5B575 /* CassetteTests */,
 			);
-			name = CassetteTests;
+			name = B_CassetteTests;
 			packageProductDependencies = (
 			);
 			productName = CassetteTests;
-			productReference = 3BF1087B2FD6F94400E5B575 /* CassetteTests.xctest */;
+			productReference = 3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		3BF108842FD6F94400E5B575 /* CassetteUITests */ = {
+		3BF108842FD6F94400E5B575 /* B_CassetteUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3BF108952FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "CassetteUITests" */;
+			buildConfigurationList = 3BF108952FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_CassetteUITests" */;
 			buildPhases = (
 				3BF108812FD6F94400E5B575 /* Sources */,
 				3BF108822FD6F94400E5B575 /* Frameworks */,
@@ -169,11 +169,11 @@
 			fileSystemSynchronizedGroups = (
 				3BF108882FD6F94400E5B575 /* CassetteUITests */,
 			);
-			name = CassetteUITests;
+			name = B_CassetteUITests;
 			packageProductDependencies = (
 			);
 			productName = CassetteUITests;
-			productReference = 3BF108852FD6F94400E5B575 /* CassetteUITests.xctest */;
+			productReference = 3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 3BF108692FD6F94200E5B575 /* Build configuration list for PBXProject "Cassette" */;
+			buildConfigurationList = 3BF108692FD6F94200E5B575 /* Build configuration list for PBXProject "B_Cassette" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -213,9 +213,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3BF1086D2FD6F94200E5B575 /* Cassette */,
-				3BF1087A2FD6F94400E5B575 /* CassetteTests */,
-				3BF108842FD6F94400E5B575 /* CassetteUITests */,
+				3BF1086D2FD6F94200E5B575 /* B_Cassette */,
+				3BF1087A2FD6F94400E5B575 /* B_CassetteTests */,
+				3BF108842FD6F94400E5B575 /* B_CassetteUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -271,12 +271,12 @@
 /* Begin PBXTargetDependency section */
 		3BF1087D2FD6F94400E5B575 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3BF1086D2FD6F94200E5B575 /* Cassette */;
+			target = 3BF1086D2FD6F94200E5B575 /* B_Cassette */;
 			targetProxy = 3BF1087C2FD6F94400E5B575 /* PBXContainerItemProxy */;
 		};
 		3BF108872FD6F94400E5B575 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3BF1086D2FD6F94200E5B575 /* Cassette */;
+			target = 3BF1086D2FD6F94200E5B575 /* B_Cassette */;
 			targetProxy = 3BF108862FD6F94400E5B575 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -487,7 +487,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Cassette.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Cassette";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/B_Cassette.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/B_Cassette";
 			};
 			name = Debug;
 		};
@@ -509,7 +509,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Cassette.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Cassette";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/B_Cassette.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/B_Cassette";
 			};
 			name = Release;
 		};
@@ -556,7 +556,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3BF108692FD6F94200E5B575 /* Build configuration list for PBXProject "Cassette" */ = {
+		3BF108692FD6F94200E5B575 /* Build configuration list for PBXProject "B_Cassette" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3BF1088D2FD6F94400E5B575 /* Debug */,
@@ -565,7 +565,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3BF1088F2FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "Cassette" */ = {
+		3BF1088F2FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_Cassette" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3BF108902FD6F94400E5B575 /* Debug */,
@@ -574,7 +574,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3BF108922FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "CassetteTests" */ = {
+		3BF108922FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_CassetteTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3BF108932FD6F94400E5B575 /* Debug */,
@@ -583,7 +583,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3BF108952FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "CassetteUITests" */ = {
+		3BF108952FD6F94400E5B575 /* Build configuration list for PBXNativeTarget "B_CassetteUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3BF108962FD6F94400E5B575 /* Debug */,

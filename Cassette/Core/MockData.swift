@@ -10,9 +10,10 @@ enum MockData {
             photos: mockPhotos(count: 23),
             keywords: ["summer", "film", "friends"],
             design: .d1,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
-        CassetteModel(
+        CassetteModel(  
             id: UUID(),
             name: "cassette 2",
             createdAt: Date().addingTimeInterval(-86400 * 30),
@@ -20,7 +21,8 @@ enum MockData {
             photos: mockPhotos(count: 41),
             keywords: ["night", "city"],
             design: .d2,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -30,7 +32,8 @@ enum MockData {
             photos: mockPhotos(count: 12),
             keywords: ["travel"],
             design: .d3,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -40,7 +43,8 @@ enum MockData {
             photos: mockPhotos(count: 31),
             keywords: ["daily"],
             design: .d2,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -50,7 +54,8 @@ enum MockData {
             photos: mockPhotos(count: 18),
             keywords: ["concert"],
             design: .d3,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -60,7 +65,8 @@ enum MockData {
             photos: mockPhotos(count: 27, daysAgo: 50),
             keywords: ["winter", "snow"],
             design: .d1,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -70,7 +76,8 @@ enum MockData {
             photos: mockPhotos(count: 33, daysAgo: 65),
             keywords: ["road trip"],
             design: .d2,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -80,7 +87,8 @@ enum MockData {
             photos: mockPhotos(count: 15, daysAgo: 95),
             keywords: ["family"],
             design: .d3,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -90,7 +98,8 @@ enum MockData {
             photos: mockPhotos(count: 48, daysAgo: 125),
             keywords: ["spring"],
             design: .d1,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         ),
         CassetteModel(
             id: UUID(),
@@ -100,7 +109,8 @@ enum MockData {
             photos: mockPhotos(count: 22, daysAgo: 185),
             keywords: ["festival", "music"],
             design: .d2,
-            printProgress: 1.0
+            printProgress: 1.0,
+            trackName: "sound_\(Int.random(in: 1...12)).mp3"
         )
     ]
 
