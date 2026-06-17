@@ -12,6 +12,11 @@ struct SelectBCutsScreen: View {
     @State private var currentIndex: Int = 0
     @State private var dragX: CGFloat = 0
     @State private var authStatus: PHAuthorizationStatus = .notDetermined
+    @State private var isLoadingMore: Bool = false
+    @State private var allLoaded: Bool = false
+    @State private var showToast: Bool = false
+    @State private var navigateToDetail: Bool = false
+    private let pageSize: Int = 100
 
     private let mainWidth: CGFloat = 297
     private let sideWidth: CGFloat = 259
@@ -70,14 +75,24 @@ struct SelectBCutsScreen: View {
                             columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3),
                             spacing: 2
                         ) {
-                            ForEach(assets, id: \.localIdentifier) { asset in
+                            ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { idx, asset in
                                 let selected = isBCutSelected(asset)
                                 GridPhotoCell(asset: asset, isSelected: selected)
                                     .onTapGesture { toggleGridSelection(asset) }
+                                    .onAppear {
+                                        if idx == assets.count - 10 {
+                                            loadMorePhotos()
+                                        }
+                                    }
                             }
                         }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 100)
+
+                        if !allLoaded {
+                            ProgressView()
+                                .padding(.bottom, 120)
+                        }
                     }
                 }
             } else {
@@ -153,19 +168,28 @@ struct SelectBCutsScreen: View {
 
             Spacer()
 
-            NavigationLink {
-                SelectDetailScreen()
-                    .environmentObject(appState)
-                    .environmentObject(cassetteData)
+            let isDisabled = cassetteData.selectedPhotos.count < 5
+            Button {
+                if isDisabled {
+                    withAnimation(.easeIn(duration: 0.2)) { showToast = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation(.easeOut(duration: 0.3)) { showToast = false }
+                    }
+                } else {
+                    navigateToDetail = true
+                }
             } label: {
                 Text("next")
                     .font(.cutiveMono(18))
                     .foregroundColor(.appWhite)
                     .frame(width: 183, height: 48)
-                    .background(Capsule().fill(Color(hex: "#555555")))
-                    .opacity(cassetteData.selectedPhotos.count < 5 ? 0.4 : 1.0)
+                    .background(Capsule().fill(isDisabled ? Color(hex: "#B3B3B3") : Color(hex: "#555555")))
             }
-            .disabled(cassetteData.selectedPhotos.count < 5)
+            .navigationDestination(isPresented: $navigateToDetail) {
+                SelectDetailScreen()
+                    .environmentObject(appState)
+                    .environmentObject(cassetteData)
+            }
 
             Spacer()
 
@@ -177,25 +201,29 @@ struct SelectBCutsScreen: View {
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 41)
-        .overlay(alignment: .top) {
-            if cassetteData.selectedPhotos.count < 5 {
-                Text("select at least 5 images!")
-                    .font(.cutiveMono(14))
-                    .foregroundColor(Color(hex: "#FF0000"))
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
-                    .offset(y: -26)
-            }
+
+        // 토스트
+        if showToast {
+            Text("select at least 5 images!")
+                .font(.cutiveMono(14))
+                .foregroundColor(.appWhite)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: "#363636")))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .transition(.opacity)
+                .zIndex(999)
+                .allowsHitTesting(false)
         }
         } // ZStack 닫기
         .navigationBarHidden(true)
         .onAppear { requestPhotoAccess() }
-        .alert("discard cassette?", isPresented: $showExitAlert) {
-            Button("discard", role: .destructive) { cassetteData.shouldDismiss = true }
+        .alert("Leave without saving?", isPresented: $showExitAlert) {
+            Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
         } message: {
-            Text("your selections will not be saved.")
+            Text("Your cassette won't be saved.")
         }
     }
 
@@ -272,14 +300,30 @@ struct SelectBCutsScreen: View {
     }
 
     func loadPhotos() {
-        guard assets.isEmpty else { return }  // 이미 로드됐으면 스킵
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        options.fetchLimit = 200
-        let result = PHAsset.fetchAssets(with: .image, options: options)
-        var loaded: [PHAsset] = []
-        result.enumerateObjects { asset, _, _ in loaded.append(asset) }
-        DispatchQueue.main.async { assets = loaded }
+        loadMorePhotos()
+    }
+
+    func loadMorePhotos() {
+        guard !isLoadingMore, !allLoaded else { return }
+        isLoadingMore = true
+        let currentCount = assets.count
+        let nextLimit = currentCount + pageSize
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let options = PHFetchOptions()
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            options.fetchLimit = nextLimit
+            let result = PHAsset.fetchAssets(with: .image, options: options)
+
+            var loaded: [PHAsset] = []
+            result.enumerateObjects { asset, _, _ in loaded.append(asset) }
+
+            DispatchQueue.main.async {
+                assets = loaded
+                allLoaded = loaded.count < nextLimit
+                isLoadingMore = false
+            }
+        }
     }
 }
 

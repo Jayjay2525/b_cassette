@@ -222,11 +222,11 @@ struct SelectDetailScreen: View {
         .ignoresSafeArea(.keyboard)
         .navigationBarHidden(true)
         .onTapGesture { hideKeyboard() }
-        .alert("discard cassette?", isPresented: $showExitAlert) {
-            Button("discard", role: .destructive) { cassetteData.shouldDismiss = true }
+        .alert("Leave without saving?", isPresented: $showExitAlert) {
+            Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
         } message: {
-            Text("your selections will not be saved.")
+            Text("Your cassette won't be saved.")
         }
     }
 

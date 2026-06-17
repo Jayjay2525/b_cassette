@@ -177,7 +177,7 @@ struct MainScreen: View {
                     CassetteDetailScreen(cassette: cassette)
                 }
             }
-            .sheet(isPresented: $showNewCassette) {
+            .fullScreenCover(isPresented: $showNewCassette) {
                 NewCassetteScreen()
                     .environmentObject(appState)
             }
@@ -189,7 +189,7 @@ struct MainScreen: View {
                 }
                 Button("cancel", role: .cancel) {}
             } message: {
-                Text("this cassette and all its photos will be permanently deleted.")
+                Text("This cassette will be permanently deleted. This action can't be undone.")
             }
         }
     }
@@ -352,6 +352,7 @@ struct CassetteStackLayer: View {
                         Image("arrow_cassette")
                             .resizable().scaledToFit()
                             .frame(width: arrowWidth)
+                            .scaleEffect(1.05)
                             .position(x: geo.size.width / 2 - 5, y: geo.size.height / 2)
                             .opacity(circleActive ? 1 : 0)
                             .animation(.easeInOut(duration: 0.25), value: circleActive)
@@ -539,22 +540,34 @@ struct UILayer: View {
                 }
             }
 
-            // 하단 정보 패널 + delete 버튼
+            // 하단 정보 패널 + 액션 버튼
             VStack {
                 Spacer()
-                // delete 버튼 (cassette 모드일 때만, 패널 바로 위 우측)
-                if panelMode == .cassette {
-                    HStack {
-                        Spacer()
+                HStack {
+                    Spacer()
+                    if panelMode == .cassette {
                         Button("delete") { onDeleteCassette?() }
                             .font(.cutiveMono(18))
                             .foregroundColor(.appAccent)
+                    } else if appState.cassettes.isEmpty {
+                        Button("help") {
+                            let email = "lapaelp@gmail.com"
+                            let subject = "B_Cassette Help"
+                            let urlString = "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+                            if let url = URL(string: urlString) {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.cutiveMono(18))
+                        .foregroundColor(.appDarkGray)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
-                    .opacity(panelVisible ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.25), value: panelVisible)
                 }
+                .padding(.leading, 24)
+                .padding(.trailing, 28)
+                .padding(.bottom, 8)
+                .opacity(panelVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: panelVisible)
+
                 BottomInfoPanel(
                     cassettes: appState.cassettes,
                     mainCassette: mainCassette,
@@ -585,9 +598,9 @@ struct BottomInfoPanel: View {
     }
 
     private var overallDateRange: String {
-        guard let first = cassettes.min(by: { $0.createdAt < $1.createdAt }),
-              let last  = cassettes.max(by: { $0.createdAt < $1.createdAt }) else { return "--" }
-        return "\(fmt.string(from: first.createdAt)) - \(fmt.string(from: last.createdAt))"
+        let allDates = cassettes.flatMap { $0.photos.map { $0.takenAt } }
+        guard let oldest = allDates.min(), let latest = allDates.max() else { return "--" }
+        return "\(fmt.string(from: oldest)) - \(fmt.string(from: latest))"
     }
 
     private var cassettePhotoDateRange: String {
@@ -595,62 +608,80 @@ struct BottomInfoPanel: View {
         return "\(fmt.string(from: range.oldest)) - \(fmt.string(from: range.latest))"
     }
 
+    private var isKorean: Bool {
+        Locale.current.language.languageCode?.identifier == "ko"
+    }
+
+    private var tosURL: URL {
+        let urlString = isKorean
+            ? "https://polydactyl-alder-784.notion.site/3821d0eacd8f80d3aad9c76950ef7f18"
+            : "https://polydactyl-alder-784.notion.site/Terms-of-Services-3821d0eacd8f80e9b4f2f72aabee40b1"
+        return URL(string: urlString)!
+    }
+
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        VStack(alignment: .trailing, spacing: 4) {
             switch mode {
             case .overall:
                 if cassettes.isEmpty {
                     Text("no cassettes yet!")
                         .font(.cutiveMono(24))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(24 * 0.45)
+                        .frame(height: 30)
                     Text("add a new cassette")
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                     Text("with your b-cuts")
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                 } else {
                     Text("\(cassettes.count) cassettes")
                         .font(.cutiveMono(24))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(24 * 0.45)
+                        .frame(height: 30)
                     Text(overallDateRange)
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                     Text("\(totalPhotos) photos")
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                 }
+                Link("terms of service", destination: tosURL)
+                    .font(.custom("SF Mono", size: 13).monospaced())
+                    .kerning(13 * 0.08)
+                    .foregroundColor(.appDarkGray)
+                    .underline()
+                    .frame(height: 23)
 
             case .cassette:
                 if let c = mainCassette {
                     Text(c.name)
                         .font(.cutiveMono(24))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(24 * 0.45)
+                        .frame(height: 30)
                     Text(cassettePhotoDateRange)
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                     Text("\(c.photos.count) photos")
                         .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
-                        .lineSpacing(16 * 0.45)
+                        .frame(height: 23)
                     Text(c.isExpired ? "expired" : "\(c.daysLeft) days left")
-                        .font(.cutiveMono(16))
+                        .font(.custom("SF Mono", size: 13).monospaced())
+                        .kerning(13 * 0.08)
+                        .frame(height: 23)
                         .foregroundColor(c.isExpired ? .appGray : .appAccent)
-                        .lineSpacing(16 * 0.45)
                 }
             }
 
             Spacer()
         }
-        .padding(.top, 14)
+        .padding(.top, 12)
         .padding(.horizontal, 16)
         .frame(width: 345, height: 140, alignment: .topTrailing)
         .background(Color.appWhite)

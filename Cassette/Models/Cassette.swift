@@ -191,6 +191,12 @@ class AppState: ObservableObject {
         try? FileManager.default.removeItem(at: dir)
     }
 
+    /// cassetteID로 직접 로컬 파일 삭제 (Don't Allow 시 rollback용)
+    func deleteLocalFiles(cassetteID: UUID) {
+        let dir = localCassetteDir(cassetteID: cassetteID)
+        try? FileManager.default.removeItem(at: dir)
+    }
+
     /// Documents/cassettes/{cassetteID}/{photoID}.heic
     private func localURL(cassetteID: UUID, photoID: UUID) -> URL {
         localCassetteDir(cassetteID: cassetteID)

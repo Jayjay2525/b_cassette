@@ -11,6 +11,7 @@ struct SelectDesignScreen: View {
     @State private var originalIdentifiers: [String] = []
     @State private var currentIndex: Int = 0
     @State private var dragY: CGFloat = 0
+    @State private var showToast = false
 
     private let designs = CassetteDesign.allCases
     private let itemSpacing: CGFloat = 150   // 아이템 간 수직 간격
@@ -115,6 +116,20 @@ struct SelectDesignScreen: View {
                 Color.clear.frame(height: 100)
             }
 
+            // ── Toast ──
+            if showToast {
+                Text("photos must be deleted\nto create a cassette")
+                    .font(.cutiveMono(14))
+                    .foregroundColor(.appWhite)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: "#363636")))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .transition(.opacity)
+                    .zIndex(999)
+            }
+
             // ── Done 버튼 고정 ──
             VStack(spacing: 0) {
                 Button {
@@ -125,17 +140,33 @@ struct SelectDesignScreen: View {
                         if case .asset(let id) = $0.imageSource { return id }
                         return nil
                     }
+
+                    // 1. 로컬 저장 먼저 (PHAsset 살아있을 때)
+                    let originalPhotos = cassetteData.selectedPhotos
                     savePhotosLocally {
-                        let newCassette = cassetteData.buildCassette()
-                        appState.addCassette(newCassette)
-                        isSaving = false
+                        // 2. Photos 삭제 요청
                         let ids = originalIdentifiers
-                        cassetteData.shouldDismiss = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                            let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
-                            var assets: [PHAsset] = []
-                            result.enumerateObjects { asset, _, _ in assets.append(asset) }
-                            appState.deleteFromPhotos(assets: assets) { _ in }
+                        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+                        var assets: [PHAsset] = []
+                        result.enumerateObjects { asset, _, _ in assets.append(asset) }
+
+                        appState.deleteFromPhotos(assets: assets) { success in
+                            guard success else {
+                                // Don't Allow → 로컬 파일 + selectedPhotos 원상복원
+                                appState.deleteLocalFiles(cassetteID: cassetteData.cassetteID)
+                                cassetteData.selectedPhotos = originalPhotos
+                                isSaving = false
+                                withAnimation(.easeIn(duration: 0.2)) { showToast = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                    withAnimation(.easeOut(duration: 0.3)) { showToast = false }
+                                }
+                                return
+                            }
+                            // 3. 삭제 성공 시 카세트 생성
+                            let newCassette = cassetteData.buildCassette()
+                            appState.addCassette(newCassette)
+                            isSaving = false
+                            cassetteData.shouldDismiss = true
                         }
                     }
                 } label: {
@@ -162,11 +193,11 @@ struct SelectDesignScreen: View {
                 currentIndex = idx
             }
         }
-        .alert("discard cassette?", isPresented: $showExitAlert) {
-            Button("discard", role: .destructive) { cassetteData.shouldDismiss = true }
+        .alert("Leave without saving?", isPresented: $showExitAlert) {
+            Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
         } message: {
-            Text("your selections will not be saved.")
+            Text("Your cassette won't be saved.")
         }
     }
 
