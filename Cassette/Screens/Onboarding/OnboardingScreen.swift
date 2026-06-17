@@ -96,7 +96,7 @@ struct OnboardingInfoPanel: View {
         if page == 0 {
             let str = isKorean
                 ? "https://polydactyl-alder-784.notion.site/3821d0eacd8f805cbc5acd1d34118336"
-                : "https://app.notion.com/p/Photos-Access-3821d0eacd8f8033acbdc5ba3ac99781"
+                : "https://polydactyl-alder-784.notion.site/Photos-Access-3821d0eacd8f8033acbdc5ba3ac99781"
             return URL(string: str)!
         } else {
             let str = isKorean
@@ -107,7 +107,7 @@ struct OnboardingInfoPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             if page == 0 {
                 Text("films")
                     .font(.cutiveMono(24))
@@ -147,7 +147,7 @@ struct OnboardingInfoPanel: View {
         }
         .padding(.top, 12)
         .padding(.horizontal, 16)
-        .frame(width: 345, height: 140, alignment: .topTrailing)
+        .frame(width: 345, height: 140, alignment: .topLeading)
         .background(Color.appWhite)
         .overlay(Rectangle().stroke(Color.appBlack, lineWidth: 1))
     }

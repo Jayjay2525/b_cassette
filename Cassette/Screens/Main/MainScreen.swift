@@ -549,7 +549,7 @@ struct UILayer: View {
                         Button("delete") { onDeleteCassette?() }
                             .font(.cutiveMono(18))
                             .foregroundColor(.appAccent)
-                    } else if appState.cassettes.isEmpty {
+                    } else {
                         Button("help") {
                             let email = "lapaelp@gmail.com"
                             let subject = "B_Cassette Help"
@@ -563,7 +563,7 @@ struct UILayer: View {
                     }
                 }
                 .padding(.leading, 24)
-                .padding(.trailing, 28)
+                .padding(.trailing, 38)
                 .padding(.bottom, 8)
                 .opacity(panelVisible ? 1 : 0)
                 .animation(.easeInOut(duration: 0.25), value: panelVisible)
@@ -620,7 +620,7 @@ struct BottomInfoPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             switch mode {
             case .overall:
                 if cassettes.isEmpty {
@@ -683,7 +683,7 @@ struct BottomInfoPanel: View {
         }
         .padding(.top, 12)
         .padding(.horizontal, 16)
-        .frame(width: 345, height: 140, alignment: .topTrailing)
+        .frame(width: 345, height: 140, alignment: .topLeading)
         .background(Color.appWhite)
         .overlay(Rectangle().stroke(Color.appBlack, lineWidth: 1))
         .padding(.bottom, 40)
