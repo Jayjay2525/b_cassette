@@ -99,13 +99,14 @@ struct SelectTypeScreen: View {
         } else {
             isSigningIn = true
             Task {
-                try? await AuthManager.shared.signInWithApple()
-                await MainActor.run {
+                do {
+                    try await AuthManager.shared.signInWithApple()
                     isSigningIn = false
-                    if AuthManager.shared.isSignedIn {
-                        cassetteData.isSpecial = true
-                        navigateToLoading = true
-                    }
+                    cassetteData.isSpecial = true
+                    navigateToLoading = true
+                } catch {
+                    isSigningIn = false
+                    print("SignIn error: \(error)")
                 }
             }
         }

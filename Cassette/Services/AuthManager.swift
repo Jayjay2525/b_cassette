@@ -13,6 +13,7 @@ class AuthManager: NSObject, ObservableObject {
 
     private var currentNonce: String = ""
     private var signInContinuation: CheckedContinuation<Void, Error>?
+    private var authController: ASAuthorizationController?
 
     func checkSession() async {
         let session = try? await supabase.auth.session
@@ -32,6 +33,7 @@ class AuthManager: NSObject, ObservableObject {
             let controller = ASAuthorizationController(authorizationRequests: [request])
             controller.delegate = self
             controller.presentationContextProvider = self
+            self.authController = controller
             controller.performRequests()
         }
         await checkSession()
@@ -98,9 +100,11 @@ extension AuthManager: ASAuthorizationControllerDelegate {
                 )
                 self.signInContinuation?.resume()
             } catch {
+                print("Supabase signInWithIdToken error: \(error)")
                 self.signInContinuation?.resume(throwing: error)
             }
             self.signInContinuation = nil
+            self.authController = nil
         }
     }
 
@@ -111,6 +115,7 @@ extension AuthManager: ASAuthorizationControllerDelegate {
         Task { @MainActor in
             self.signInContinuation?.resume(throwing: error)
             self.signInContinuation = nil
+            self.authController = nil
         }
     }
 }
@@ -119,10 +124,12 @@ extension AuthManager: ASAuthorizationControllerDelegate {
 
 extension AuthManager: ASAuthorizationControllerPresentationContextProviding {
     nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        MainActor.assumeIsolated {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        }
     }
 }
 

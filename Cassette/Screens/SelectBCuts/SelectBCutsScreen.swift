@@ -263,6 +263,10 @@ struct SelectBCutsScreen: View {
         processingProgress = 0.0
 
         let photos = cassetteData.selectedPhotos
+        cassetteData.assetIDsToDelete = photos.compactMap {
+            if case .asset(let id) = $0.imageSource { return id }
+            return nil
+        }
         let cassetteID = cassetteData.cassetteID
         let total = photos.count
         var savedPhotos: [BCutPhoto] = Array(repeating: photos[0], count: total)

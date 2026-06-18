@@ -7,7 +7,6 @@ struct SelectDesignScreen: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var showExitAlert = false
-    @State private var showDeleteAlert = false
     @State private var isSaving = false
     @State private var currentIndex: Int = 0
     @State private var dragY: CGFloat = 0
@@ -135,7 +134,7 @@ struct SelectDesignScreen: View {
                 Button {
                     guard !isSaving else { return }
                     cassetteData.design = designs[currentIndex]
-                    showDeleteAlert = true
+                    deleteAndFinish()
                 } label: {
                     Group {
                         if isSaving {
@@ -166,20 +165,11 @@ struct SelectDesignScreen: View {
         } message: {
             Text("Your cassette won't be saved.")
         }
-        .alert("delete photos from library?", isPresented: $showDeleteAlert) {
-            Button("delete", role: .destructive) { deleteAndFinish() }
-            Button("cancel", role: .cancel) { }
-        } message: {
-            Text("Your b-cuts will be deleted from Photos to create this cassette.")
-        }
     }
 
     private func deleteAndFinish() {
         isSaving = true
-        let ids = cassetteData.selectedPhotos.compactMap { photo -> String? in
-            if case .asset(let id) = photo.imageSource { return id }
-            return nil
-        }
+        let ids = cassetteData.assetIDsToDelete
         let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
         var assets: [PHAsset] = []
         result.enumerateObjects { asset, _, _ in assets.append(asset) }

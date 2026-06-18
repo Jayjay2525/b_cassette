@@ -89,6 +89,12 @@ class AppState: ObservableObject {
         cassettes.append(cassette)
     }
 
+    func updateCassetteStatus(id: UUID, status: CassetteStatus) {
+        if let idx = cassettes.firstIndex(where: { $0.id == id }) {
+            cassettes[idx].status = status
+        }
+    }
+
     /// 카세트 자체를 삭제 (로컬 파일 + 데이터 모두 제거)
     func deleteCassette(id: UUID) {
         guard let cassette = cassettes.first(where: { $0.id == id }) else { return }

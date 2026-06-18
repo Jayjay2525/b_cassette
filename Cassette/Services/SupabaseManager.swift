@@ -4,7 +4,8 @@ import Supabase
 
 let supabase = SupabaseClient(
     supabaseURL: URL(string: Config.supabaseURL)!,
-    supabaseKey: Config.supabaseKey
+    supabaseKey: Config.supabaseKey,
+    options: .init(auth: .init(emitLocalSessionAsInitialSession: true))
 )
 
 class SupabaseManager: ObservableObject {
@@ -40,18 +41,22 @@ class SupabaseManager: ObservableObject {
 
     // MARK: - Pending cassette 확인 (앱 진입 시)
 
-    func checkPendingCassettes(cassettes: inout [CassetteModel]) async {
-        for i in cassettes.indices where cassettes[i].status == .generating {
-            guard let taskId = cassettes[i].taskId else { continue }
+    func checkPendingCassettes(appState: AppState) async {
+        for i in appState.cassettes.indices where appState.cassettes[i].status == .generating {
+            guard let taskId = appState.cassettes[i].taskId else { continue }
             guard let result = try? await fetchCassetteMusic(taskId: taskId) else { continue }
 
             if result.status == "completed", let urlString = result.audioURL {
-                if let localURL = await downloadAudio(urlString: urlString, cassetteID: cassettes[i].id) {
-                    cassettes[i].trackName = localURL.lastPathComponent
-                    cassettes[i].status = .completed
+                if let localURL = await downloadAudio(urlString: urlString, cassetteID: appState.cassettes[i].id) {
+                    await MainActor.run {
+                        appState.cassettes[i].trackName = localURL.lastPathComponent
+                        appState.cassettes[i].status = .completed
+                    }
                 }
             } else if result.status == "failed" {
-                cassettes[i].status = .failed
+                await MainActor.run {
+                    appState.cassettes[i].status = .failed
+                }
             }
         }
     }

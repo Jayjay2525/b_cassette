@@ -254,6 +254,7 @@ struct SelectDetailScreen: View {
                 if cassetteData.name.isEmpty {
                     cassetteData.name = "cassette \(appState.cassettes.count + 1)"
                 }
+                updateKeywords()
                 navigateToDesign = true
             } label: {
                 Text("next")

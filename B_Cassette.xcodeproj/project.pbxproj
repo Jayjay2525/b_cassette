@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		3BA128E42FE3F84F00DE699D /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 3BA128E32FE3F84F00DE699D /* Auth */; };
 		3BA128E62FE3F84F00DE699D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3BA128E52FE3F84F00DE699D /* Supabase */; };
+		3BA128F22FE42ADD00DE699D /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 3BA128F12FE42ADD00DE699D /* Lottie */; };
+		3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F32FE42B3400DE699D /* onboarding_2.json */; };
+		3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F52FE432A000DE699D /* onboarding_1.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,6 +33,8 @@
 
 /* Begin PBXFileReference section */
 		3BA128E72FE3F8BD00DE699D /* B_Cassette.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = B_Cassette.entitlements; sourceTree = "<group>"; };
+		3BA128F32FE42B3400DE699D /* onboarding_2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_2.json; sourceTree = "<group>"; };
+		3BA128F52FE432A000DE699D /* onboarding_1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_1.json; sourceTree = "<group>"; };
 		3BF1086E2FD6F94200E5B575 /* B_Cassette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = B_Cassette.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -73,6 +78,7 @@
 			files = (
 				3BA128E62FE3F84F00DE699D /* Supabase in Frameworks */,
 				3BA128E42FE3F84F00DE699D /* Auth in Frameworks */,
+				3BA128F22FE42ADD00DE699D /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +102,8 @@
 		3BF108652FD6F94200E5B575 = {
 			isa = PBXGroup;
 			children = (
+				3BA128F52FE432A000DE699D /* onboarding_1.json */,
+				3BA128F32FE42B3400DE699D /* onboarding_2.json */,
 				3BA128E72FE3F8BD00DE699D /* B_Cassette.entitlements */,
 				3BF108702FD6F94200E5B575 /* Cassette */,
 				3BF1087E2FD6F94400E5B575 /* CassetteTests */,
@@ -136,6 +144,7 @@
 			packageProductDependencies = (
 				3BA128E32FE3F84F00DE699D /* Auth */,
 				3BA128E52FE3F84F00DE699D /* Supabase */,
+				3BA128F12FE42ADD00DE699D /* Lottie */,
 			);
 			productName = Cassette;
 			productReference = 3BF1086E2FD6F94200E5B575 /* B_Cassette.app */;
@@ -221,6 +230,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3BA128E22FE3F84F00DE699D /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				3BA128F02FE42ADD00DE699D /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3BF1086F2FD6F94200E5B575 /* Products */;
@@ -239,6 +249,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */,
+				3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -621,6 +633,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		3BA128F02FE42ADD00DE699D /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -633,6 +653,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3BA128E22FE3F84F00DE699D /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		3BA128F12FE42ADD00DE699D /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3BA128F02FE42ADD00DE699D /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

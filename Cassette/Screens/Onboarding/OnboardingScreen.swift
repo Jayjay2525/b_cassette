@@ -1,5 +1,6 @@
 import SwiftUI
 import Photos
+import Lottie
 
 struct OnboardingScreen: View {
     let onComplete: () -> Void
@@ -27,10 +28,9 @@ struct OnboardingScreen: View {
                     Spacer()
                 }
 
-                // 일러스트 이미지
-                Image(page == 0 ? "onboarding_asset_1" : "onboarding_asset_2")
-                    .resizable()
-                    .scaledToFit()
+                // 일러스트 애니메이션
+                LottieView(animation: .named(page == 0 ? "onboarding_1" : "onboarding_2"))
+                    .playing(loopMode: .loop)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
 

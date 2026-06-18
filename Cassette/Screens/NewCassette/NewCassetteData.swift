@@ -7,6 +7,9 @@ class NewCassetteData: ObservableObject {
     @Published var keywords: [String] = []
     @Published var suggestedKeywords: [String] = []  // Claude 추출 키워드
     @Published var isSpecial: Bool = false
+    var assetIDsToDelete: [String] = []
+    var musicTaskId: String? = nil
+    var musicCompleted: Bool = false
     @Published var design: CassetteDesign = .d1
     @Published var shouldDismiss: Bool = false
     var expiresAt: Date = Date().addingTimeInterval(86400 * 30)  // 30일 후
@@ -34,7 +37,9 @@ class NewCassetteData: ObservableObject {
             keywords: keywords,
             design: design,
             printProgress: 1.0,
-            trackName: "\(track.name).\(track.ext)"
+            trackName: "\(track.name).\(track.ext)",
+            status: isSpecial ? (musicCompleted ? .completed : .generating) : .completed,
+            taskId: musicTaskId
         )
     }
 }

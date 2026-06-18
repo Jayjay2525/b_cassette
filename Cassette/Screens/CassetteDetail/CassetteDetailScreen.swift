@@ -10,6 +10,7 @@ struct CassetteDetailScreen: View {
 
     // MARK: - State
     @State private var isPlaying: Bool = false
+    @State private var isScrubbing: Bool = false
     @State private var cassettePressed: Bool = false
     @State private var showKeywords: Bool = false
     @State private var playProgress: Double = 0.0
@@ -100,7 +101,7 @@ struct CassetteDetailScreen: View {
         }
         .navigationBarHidden(true)
         .onReceive(timer) { _ in
-            guard isPlaying, let player else { return }
+            guard isPlaying, !isScrubbing, let player else { return }
             if player.isPlaying {
                 withAnimation(.linear(duration: 0.05)) {
                     playProgress = player.currentTime / player.duration
@@ -231,6 +232,7 @@ struct CassetteDetailScreen: View {
                     .onChanged { v in
                         let ratio = max(0, min(1, Double(v.location.x / indicatorWidth)))
                         playProgress = ratio
+                        isScrubbing = true
                         player?.pause()
                     }
                     .onEnded { v in
@@ -238,8 +240,11 @@ struct CassetteDetailScreen: View {
                         playProgress = ratio
                         if let player {
                             player.currentTime = ratio * player.duration
-                            if isPlaying { player.play() }
+                            if isPlaying {
+                                player.play()
+                            }
                         }
+                        isScrubbing = false
                     }
             )
 

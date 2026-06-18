@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Lottie
 
 struct CassetteLoadingScreen: View {
     @EnvironmentObject var appState: AppState
@@ -8,9 +9,10 @@ struct CassetteLoadingScreen: View {
     @State private var navigateToDesign = false
     @State private var progress: Double = 0.0
     @State private var dotCount = 0
+    @State private var showSkip = false
+    @State private var taskId: String? = nil
+    @State private var pollingTask: Task<Void, Never>? = nil
 
-    private let totalDuration: Double = 10.0
-    private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
     private let dotTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -20,42 +22,52 @@ struct CassetteLoadingScreen: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                // 로띠 자리 (추후 교체)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.appBlack, lineWidth: 1.5)
-                        .frame(width: 240, height: 200)
+                LottieView(animation: .named("onboarding_2"))
+                    .playing(loopMode: .loop)
+                    .frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
+                    .padding(.bottom, 48)
 
-                    VStack(spacing: 12) {
-                        Image(systemName: "record.circle")
-                            .font(.system(size: 56))
-                            .foregroundColor(.appBlack)
-                        Text("developing your cassette")
-                            .font(.appMicro)
-                            .foregroundColor(.appDarkGray)
-                    }
-                }
-                .padding(.bottom, 48)
-
-                // 타이틀
                 Text("making your cassette\(String(repeating: ".", count: dotCount + 1))")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
-                    .frame(width: 280, alignment: .leading)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
                     .padding(.bottom, 20)
 
-                // 프로그레스 바
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color(hex: "#D0D0D0"))
                         .frame(width: 300, height: 6)
                     Capsule()
-                        .fill(Color.appBlack)
+                        .fill(Color.white)
                         .frame(width: 300 * CGFloat(progress), height: 6)
-                        .animation(.linear(duration: 0.1), value: progress)
+                        .animation(.linear(duration: 0.3), value: progress)
                 }
 
                 Spacer()
+
+                if showSkip {
+                    VStack(spacing: 16) {
+                        Text("taking longer than expected.\npick a design first?")
+                            .font(.appMicro)
+                            .foregroundColor(.appDarkGray)
+                            .multilineTextAlignment(.center)
+
+                        Button {
+                            pollingTask?.cancel()
+                            navigateToDesign = true
+                        } label: {
+                            Text("next")
+                                .font(.appBody)
+                                .foregroundColor(.appWhite)
+                                .frame(width: 201, height: 48)
+                                .background(Capsule().fill(Color(hex: "#555555")))
+                        }
+                    }
+                    .transition(.opacity)
+                }
+
+                Spacer().frame(height: 11)
             }
         }
         .navigationBarHidden(true)
@@ -64,30 +76,80 @@ struct CassetteLoadingScreen: View {
                 .environmentObject(appState)
                 .environmentObject(cassetteData)
         }
-        .onReceive(timer) { _ in
-            guard progress < 1.0 else { return }
-            progress = min(1.0, progress + 0.1 / totalDuration)
-            if progress >= 1.0 {
-                navigateToDesign = true
-            }
+        .onDisappear {
+            pollingTask?.cancel()
         }
         .onReceive(dotTimer) { _ in
             dotCount = (dotCount + 1) % 3
         }
         .onAppear {
             if cassetteData.isSpecial {
-                startMusicGeneration()
+                startSpecialFlow()
+            } else {
+                startNormalFlow()
             }
         }
     }
 
-    private func startMusicGeneration() {
+    // MARK: - Normal: 10초 타이머 후 자동 이동
+    private func startNormalFlow() {
         Task {
-            await MusicGPTService.requestGeneration(
+            for i in 1...100 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                await MainActor.run {
+                    progress = Double(i) / 100.0
+                }
+            }
+            await MainActor.run { navigateToDesign = true }
+        }
+    }
+
+    // MARK: - Special: MusicGPT 호출 + polling
+    private func startSpecialFlow() {
+        Task {
+            // 0→70%를 15초에 걸쳐 채움
+            let steps = 150
+            for i in 1...steps {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                await MainActor.run {
+                    progress = 0.7 * Double(i) / Double(steps)
+                }
+            }
+
+            // 70% 도달 후 안내 문구 + next 버튼 표시
+            await MainActor.run {
+                withAnimation { showSkip = true }
+            }
+
+            // MusicGPT 요청
+            let id = await MusicGPTService.requestGeneration(
                 keywords: cassetteData.keywords,
                 photoCount: cassetteData.selectedPhotos.count,
                 cassetteID: cassetteData.cassetteID
             )
+            await MainActor.run {
+                taskId = id
+                cassetteData.musicTaskId = id
+            }
+
+            // 완료될 때까지 3초마다 polling
+            guard let id else { return }
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 7_000_000_000)
+                    let music = try? await SupabaseManager.shared.fetchCassetteMusic(taskId: id)
+                    if music?.status == "completed" {
+                        await MainActor.run {
+                            cassetteData.musicCompleted = true
+                            withAnimation(.linear(duration: 0.5)) { progress = 1.0 }
+                        }
+                        try? await Task.sleep(nanoseconds: 600_000_000)
+                        await MainActor.run { navigateToDesign = true }
+                        return
+                    }
+                }
+            }
         }
     }
 }
+

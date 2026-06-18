@@ -18,6 +18,7 @@ struct MainScreen: View {
     @State private var navigateToDetail = false
     @State private var showNewCassette = false
     @State private var showDeleteAlert = false
+    @State private var pollingTask: Task<Void, Never>? = nil
 
     let dragThreshold: CGFloat = 160
     let swipeRightThreshold: CGFloat = 120
@@ -151,7 +152,18 @@ struct MainScreen: View {
                         circleActive: circleActive,
                         onMenuTap: onMenuTap,
                         onAddTap: { showNewCassette = true },
-                        onDeleteCassette: { showDeleteAlert = true }
+                        onDeleteCassette: { showDeleteAlert = true },
+                        onRetryCassette: {
+                            guard let cassette = selectedCassette ?? mainCassette else { return }
+                            appState.updateCassetteStatus(id: cassette.id, status: .generating)
+                            Task {
+                                await MusicGPTService.requestGeneration(
+                                    keywords: cassette.keywords,
+                                    photoCount: cassette.bCuts.count,
+                                    cassetteID: cassette.id
+                                )
+                            }
+                        }
                     )
                     .opacity((1 - swipeRightProgress) * (circleActive ? (1 - abs(dragProgress) * 0.7) : 1))
                 }
@@ -170,6 +182,7 @@ struct MainScreen: View {
                         circleActive = true
                         panelMode = .cassette
                     }
+                    startPollingIfNeeded()
                 }
             }
             .navigationDestination(isPresented: $navigateToDetail) {
@@ -181,6 +194,9 @@ struct MainScreen: View {
                 NewCassetteScreen()
                     .environmentObject(appState)
             }
+            .onAppear {
+                startPollingIfNeeded()
+            }
             .alert("delete cassette?", isPresented: $showDeleteAlert) {
                 Button("delete", role: .destructive) {
                     if let cassette = selectedCassette {
@@ -190,6 +206,23 @@ struct MainScreen: View {
                 Button("cancel", role: .cancel) {}
             } message: {
                 Text("This cassette will be permanently deleted. This action can't be undone.")
+            }
+        }
+    }
+}
+
+// MARK: - Pending polling
+
+extension MainScreen {
+    func startPollingIfNeeded() {
+        pollingTask?.cancel()
+        guard appState.cassettes.contains(where: { $0.status == .generating }) else { return }
+        pollingTask = Task {
+            while !Task.isCancelled {
+                await SupabaseManager.shared.checkPendingCassettes(appState: appState)
+                let stillPending = appState.cassettes.contains(where: { $0.status == .generating })
+                if !stillPending { return }
+                try? await Task.sleep(nanoseconds: 7_000_000_000)
             }
         }
     }
@@ -325,9 +358,20 @@ struct CassetteStackLayer: View {
                     let wrapOpacity = isWrapAround ? Double(max(0, 1 - t * 2)) : 1.0
                     let isMain = slotIndex == 0
 
-                    Image(cassette.design.imageName)
-                        .resizable().scaledToFill()
-                        .frame(width: 345, height: 222)
+                    let isGenerating = cassette.status == .generating
+                    ZStack {
+                        Image(cassette.design.imageName)
+                            .resizable().scaledToFill()
+                            .frame(width: 345, height: 222)
+                        if isGenerating {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.black.opacity(0.45))
+                                .frame(width: 345, height: 222)
+                            Text("generating...")
+                                .font(.appMicro)
+                                .foregroundColor(.white)
+                        }
+                    }
                         .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                         .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                         .rotationEffect(.degrees(slot.rotation))
@@ -337,7 +381,7 @@ struct CassetteStackLayer: View {
                         )
                         .opacity((isMain ? Double(cassette.printProgress) : Double(cassette.printProgress) * Double(1 - swipeRightProgress)) * wrapOpacity)
                         .zIndex(slot.zIndex)
-                        .gesture(isMain ? DragGesture(minimumDistance: 10)
+                        .gesture(isMain && !isGenerating ? DragGesture(minimumDistance: 10)
                             .onChanged { v in
                                 if abs(v.translation.width) > abs(v.translation.height) {
                                     onSwipeRightChanged(v.translation.width)
@@ -345,7 +389,7 @@ struct CassetteStackLayer: View {
                             }
                             .onEnded { v in onSwipeRightEnded(v.translation.width) }
                         : nil)
-                        .onTapGesture { if isMain { onTap(cassette) } }
+                        .onTapGesture { if isMain && !isGenerating { onTap(cassette) } }
                         .allowsHitTesting(isMain)
 
                     if isMain {
@@ -401,9 +445,20 @@ struct CassetteStackLayer: View {
                             let slot = lerpSlot(currentSlot, targetSlot, t: t)
                             let isMain = csi == 0
 
-                            Image(cassette.design.imageName)
-                                .resizable().scaledToFill()
-                                .frame(width: 345, height: 222)
+                            let isGenerating = cassette.status == .generating
+                            ZStack {
+                                Image(cassette.design.imageName)
+                                    .resizable().scaledToFill()
+                                    .frame(width: 345, height: 222)
+                                if isGenerating {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.black.opacity(0.45))
+                                        .frame(width: 345, height: 222)
+                                    Text("generating...")
+                                        .font(.appMicro)
+                                        .foregroundColor(.white)
+                                }
+                            }
                                 .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                                 .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                                 .rotationEffect(.degrees(slot.rotation))
@@ -413,7 +468,7 @@ struct CassetteStackLayer: View {
                                 )
                                 .opacity(isMain ? Double(cassette.printProgress) : Double(cassette.printProgress) * Double(1 - swipeRightProgress))
                                 .zIndex(slot.zIndex)
-                                .gesture(isMain ? DragGesture(minimumDistance: 10)
+                                .gesture(isMain && !isGenerating ? DragGesture(minimumDistance: 10)
                                     .onChanged { v in
                                         if abs(v.translation.width) > abs(v.translation.height) {
                                             onSwipeRightChanged(v.translation.width)
@@ -421,7 +476,7 @@ struct CassetteStackLayer: View {
                                     }
                                     .onEnded { v in onSwipeRightEnded(v.translation.width) }
                                 : nil)
-                                .onTapGesture { if isMain { onTap(cassette) } }
+                                .onTapGesture { if isMain && !isGenerating { onTap(cassette) } }
                                 .allowsHitTesting(isMain)
 
                             if isMain {
@@ -453,6 +508,7 @@ struct UILayer: View {
     let onMenuTap: () -> Void
     let onAddTap: () -> Void
     var onDeleteCassette: (() -> Void)? = nil
+    var onRetryCassette: (() -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -546,9 +602,15 @@ struct UILayer: View {
                 HStack {
                     Spacer()
                     if panelMode == .cassette {
-                        Button("delete") { onDeleteCassette?() }
-                            .font(.appBody)
-                            .foregroundColor(.appAccent)
+                        if mainCassette?.status == .failed {
+                            Button("retry") { onRetryCassette?() }
+                                .font(.appBody)
+                                .foregroundColor(.appAccent)
+                        } else {
+                            Button("delete") { onDeleteCassette?() }
+                                .font(.appBody)
+                                .foregroundColor(.appAccent)
+                        }
                     } else {
                         Button("help") {
                             let email = "lapaelp@gmail.com"
