@@ -44,7 +44,7 @@ struct SelectDesignScreen: View {
                     }
                     Spacer()
                     Text("make a cassette")
-                        .font(.cutiveMono(20))
+                        .font(.appTitle)
                         .foregroundColor(.appBlack)
                     Spacer()
                     Button { showExitAlert = true } label: {
@@ -61,7 +61,7 @@ struct SelectDesignScreen: View {
                 VStack(spacing: 12) {
                     // 이름
                     Text(cassetteData.name.isEmpty ? "untitled" : cassetteData.name)
-                        .font(.cutiveMono(20))
+                        .font(.appTitle)
                         .foregroundColor(.appBlack)
                         .multilineTextAlignment(.center)
                         .lineLimit(1)
@@ -74,12 +74,12 @@ struct SelectDesignScreen: View {
 
                     // 날짜
                     Text(dateRangeString)
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appDarkGray)
 
                     // 사진 수
                     Text("\(cassetteData.selectedPhotos.count) photos")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appDarkGray)
                 }
                 .padding(.bottom, 16)
@@ -119,7 +119,7 @@ struct SelectDesignScreen: View {
             // ── Toast ──
             if showToast {
                 Text("photos must be deleted\nto create a cassette")
-                    .font(.cutiveMono(14))
+                    .font(.appMicro)
                     .foregroundColor(.appWhite)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
@@ -176,14 +176,14 @@ struct SelectDesignScreen: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .appWhite))
                         } else {
                             Text("done")
-                                .font(.cutiveMono(18))
+                                .font(.appBody)
                                 .foregroundColor(.appWhite)
                         }
                     }
-                    .frame(width: 183, height: 48)
+                    .frame(width: 201, height: 48)
                     .background(Capsule().fill(Color(hex: "#555555")))
                 }
-                Spacer().frame(height: 41)
+                Spacer().frame(height: 11)
             }
             .frame(maxWidth: .infinity)
         }

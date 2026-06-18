@@ -9,9 +9,15 @@ struct SelectDetailScreen: View {
     @State private var navigateToDesign: Bool = false
     @State private var keywordInput1: String = ""
     @State private var keywordInput2: String = ""
+    @State private var keywordInput3: String = ""
     @FocusState private var nameFieldFocused: Bool
     @FocusState private var keyword1Focused: Bool
     @FocusState private var keyword2Focused: Bool
+    @FocusState private var keyword3Focused: Bool
+
+    private func suggested(_ index: Int) -> String {
+        cassetteData.suggestedKeywords.count > index ? cassetteData.suggestedKeywords[index] : ""
+    }
 
     private let fmt: DateFormatter = {
         let f = DateFormatter()
@@ -42,7 +48,7 @@ struct SelectDetailScreen: View {
                 }
                 Spacer()
                 Text("make a film")
-                    .font(.cutiveMono(20))
+                    .font(.appTitle)
                     .foregroundColor(.appBlack)
                 Spacer()
                 Button { showExitAlert = true } label: {
@@ -56,19 +62,18 @@ struct SelectDetailScreen: View {
             .padding(.bottom, 16)
 
             // ── 2. title ──
-            Text("title")
-                .font(.cutiveMono(16))
+            Text("[title]")
+                .font(.appBody)
                 .foregroundColor(.appBlack)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
 
             // ── 3. 이름 입력 ──
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Color.clear.frame(width: 24, height: 24)
 
-                TextField(text: $cassetteData.name, prompt: Text("cassette \(appState.cassettes.count + 1)").foregroundColor(.appGray)) { }
-                    .font(.cutiveMono(20))
+                TextField(text: $cassetteData.name, prompt: Text("film \(appState.cassettes.count + 1)").foregroundColor(.appGray)) { }
+                    .font(.appTitle)
                     .foregroundColor(.appBlack)
                     .multilineTextAlignment(.center)
                     .focused($nameFieldFocused)
@@ -89,42 +94,52 @@ struct SelectDetailScreen: View {
                 }
                 .frame(width: 24, height: 24)
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, 8)
 
             // ── 4. 날짜 ──
             Text(dateRangeString)
-                .font(.cutiveMono(16))
+                .font(.appBody)
                 .foregroundColor(.appDarkGray)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
 
             // ── 5. 구분선 ──
             Rectangle()
                 .fill(Color(hex: "#B4B4B4"))
                 .frame(height: 1)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 20)
-
-            // ── 6. 키워드 ──
-            Text("keyword")
-                .font(.cutiveMono(16))
-                .foregroundColor(.appBlack)
-                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 16)
 
-            VStack(spacing: 12) {
+            // ── 6. 키워드 ──
+            Text("[keywords]")
+                .font(.appBody)
+                .foregroundColor(.appBlack)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 4)
+            
+            Text("describe the film")
+                .font(.appMicro)
+                .foregroundColor(.appDarkGray)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 12)
+
+            VStack(spacing: 8) {
                 // keyword 1
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     Color.clear.frame(width: 24, height: 24)
-                    TextField(text: $keywordInput1, prompt: Text("summer").foregroundColor(.appGray)) { }
-                        .font(.cutiveMono(16))
+                    TextField(text: $keywordInput1, prompt: Text(suggested(0).isEmpty ? "summer" : suggested(0)).foregroundColor(.appGray)) { }
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .multilineTextAlignment(.center)
                         .focused($keyword1Focused)
                         .lineLimit(1)
-                        .frame(width: 220, height: 36)
-                        .background(Capsule().fill(Color.appWhite))
-                        .onChange(of: keywordInput1) { _, val in updateKeywords() }
+                        .truncationMode(.tail)
+                        .frame(width: 257, height: 26)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 16)
+                        .background(Color.appWhite)
+                        .frame(width: 289, height: 36)
+                        .onChange(of: keywordInput1) { _, _ in updateKeywords() }
                     Button { keyword1Focused = true } label: {
                         Image(systemName: "pencil")
                             .font(.system(size: 18))
@@ -134,18 +149,46 @@ struct SelectDetailScreen: View {
                 }
 
                 // keyword 2
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     Color.clear.frame(width: 24, height: 24)
-                    TextField(text: $keywordInput2, prompt: Text("friends").foregroundColor(.appGray)) { }
-                        .font(.cutiveMono(16))
+                    TextField(text: $keywordInput2, prompt: Text(suggested(1).isEmpty ? "friends" : suggested(1)).foregroundColor(.appGray)) { }
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .multilineTextAlignment(.center)
                         .focused($keyword2Focused)
                         .lineLimit(1)
-                        .frame(width: 220, height: 36)
-                        .background(Capsule().fill(Color.appWhite))
-                        .onChange(of: keywordInput2) { _, val in updateKeywords() }
+                        .truncationMode(.tail)
+                        .frame(width: 257, height: 26)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 16)
+                        .background(Color.appWhite)
+                        .frame(width: 289, height: 36)
+                        .onChange(of: keywordInput2) { _, _ in updateKeywords() }
                     Button { keyword2Focused = true } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 18))
+                            .foregroundColor(.appBlack)
+                    }
+                    .frame(width: 24, height: 24)
+                }
+
+                // keyword 3
+                HStack(spacing: 8) {
+                    Color.clear.frame(width: 24, height: 24)
+                    TextField(text: $keywordInput3, prompt: Text(suggested(2).isEmpty ? "golden hour" : suggested(2)).foregroundColor(.appGray)) { }
+                        .font(.appBody)
+                        .foregroundColor(.appBlack)
+                        .multilineTextAlignment(.center)
+                        .focused($keyword3Focused)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: 257, height: 26)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 16)
+                        .background(Color.appWhite)
+                        .frame(width: 289, height: 36)
+                        .onChange(of: keywordInput3) { _, _ in updateKeywords() }
+                    Button { keyword3Focused = true } label: {
                         Image(systemName: "pencil")
                             .font(.system(size: 18))
                             .foregroundColor(.appBlack)
@@ -160,7 +203,7 @@ struct SelectDetailScreen: View {
                 .fill(Color(hex: "#B4B4B4"))
                 .frame(height: 1)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
 
             // ── 8. 사진 개수 ──
             HStack(spacing: 8) {
@@ -169,11 +212,11 @@ struct SelectDetailScreen: View {
                         .fill(Color.appWhite)
                         .frame(width: 33, height: 29)
                     Text("\(cassetteData.selectedPhotos.count)")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                 }
                 Text("photos")
-                    .font(.cutiveMono(16))
+                    .font(.appBody)
                     .foregroundColor(.appBlack)
             }
             .frame(maxWidth: .infinity, alignment: .center)
@@ -214,9 +257,9 @@ struct SelectDetailScreen: View {
                 navigateToDesign = true
             } label: {
                 Text("next")
-                    .font(.cutiveMono(18))
+                    .font(.appBody)
                     .foregroundColor(.appWhite)
-                    .frame(width: 183, height: 48)
+                    .frame(width: 201, height: 48)
                     .background(Capsule().fill(Color(hex: "#555555")))
             }
             .navigationDestination(isPresented: $navigateToDesign) {
@@ -224,7 +267,7 @@ struct SelectDetailScreen: View {
                     .environmentObject(appState)
                     .environmentObject(cassetteData)
             }
-            Spacer().frame(height: 41)
+            Spacer().frame(height: 11)
         }
         .frame(maxWidth: .infinity)
         .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
@@ -244,15 +287,19 @@ struct SelectDetailScreen: View {
     private func loadKeywords() {
         if cassetteData.keywords.count > 0 { keywordInput1 = cassetteData.keywords[0] }
         if cassetteData.keywords.count > 1 { keywordInput2 = cassetteData.keywords[1] }
+        if cassetteData.keywords.count > 2 { keywordInput3 = cassetteData.keywords[2] }
     }
 
     private func updateKeywords() {
-        var kws: [String] = []
+        // 빈 칸은 suggestedKeyword로 대체
         let k1 = keywordInput1.trimmingCharacters(in: .whitespaces)
         let k2 = keywordInput2.trimmingCharacters(in: .whitespaces)
-        if !k1.isEmpty { kws.append(k1) }
-        if !k2.isEmpty { kws.append(k2) }
-        cassetteData.keywords = kws
+        let k3 = keywordInput3.trimmingCharacters(in: .whitespaces)
+        cassetteData.keywords = [
+            k1.isEmpty ? suggested(0) : k1,
+            k2.isEmpty ? suggested(1) : k2,
+            k3.isEmpty ? suggested(2) : k3
+        ].filter { !$0.isEmpty }
     }
 
     private func hideKeyboard() {

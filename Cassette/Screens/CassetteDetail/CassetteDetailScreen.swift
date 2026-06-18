@@ -56,13 +56,13 @@ struct CassetteDetailScreen: View {
 
                 // 2. Date info
                 Text(dateRangeText)
-                    .font(.cutiveMono(15))
+                    .font(.appMicro)
                     .foregroundColor(.appDarkGray)
                     .padding(.top, 16)
 
                 // 3. Photo count info
                 Text("\(cassette.photos.count) photos")
-                    .font(.cutiveMono(15))
+                    .font(.appMicro)
                     .foregroundColor(.appDarkGray)
                     .padding(.top, 8)
 
@@ -85,7 +85,7 @@ struct CassetteDetailScreen: View {
 
                 // 8. Days left
                 Text(cassette.isExpired ? "expired" : "\(cassette.daysLeft) days left")
-                    .font(.cutiveMono(16))
+                    .font(.appBody)
                     .foregroundColor(cassette.isExpired ? .appDarkGray : .appAccent)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 16)
@@ -246,11 +246,11 @@ struct CassetteDetailScreen: View {
             // Time labels
             HStack {
                 Text(timeString(playProgress * totalDuration))
-                    .font(.cutiveMono(12))
+                    .font(.appMicro)
                     .foregroundColor(.appBlack)
                 Spacer()
                 Text(timeString(totalDuration))
-                    .font(.cutiveMono(12))
+                    .font(.appMicro)
                     .foregroundColor(.appBlack)
             }
             .frame(width: indicatorWidth)
@@ -326,7 +326,7 @@ struct CassetteDetailScreen: View {
                 // Layer 2: B-cut 사진들 (playProgress에 따라 오른→왼 이동)
                 if bCuts.isEmpty {
                     Text("no b-cuts")
-                        .font(.cutiveMono(13))
+                        .font(.appMicro)
                         .foregroundColor(.appWhite)
                 } else {
                     let autoOffset = filmOffset(screenWidth: geo.size.width, totalFilmWidth: totalFilmWidth)
@@ -372,7 +372,7 @@ struct CassetteDetailScreen: View {
                 showRevertAlert = true
             } label: {
                 Text("revert")
-                    .font(.cutiveMono(18))
+                    .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(maxWidth: 160)
                     .frame(height: 52)
@@ -385,7 +385,7 @@ struct CassetteDetailScreen: View {
                 showDeleteAlert = true
             } label: {
                 Text("delete")
-                    .font(.cutiveMono(18))
+                    .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(maxWidth: 160)
                     .frame(height: 52)
@@ -410,7 +410,7 @@ struct FlowLayout: View {
                     HStack(spacing: spacing) {
                         ForEach(row, id: \.self) { keyword in
                             Text(keyword)
-                                .font(.cutiveMono(16))
+                                .font(.appBody)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)

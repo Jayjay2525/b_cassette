@@ -547,7 +547,7 @@ struct UILayer: View {
                     Spacer()
                     if panelMode == .cassette {
                         Button("delete") { onDeleteCassette?() }
-                            .font(.cutiveMono(18))
+                            .font(.appBody)
                             .foregroundColor(.appAccent)
                     } else {
                         Button("help") {
@@ -558,7 +558,7 @@ struct UILayer: View {
                                 UIApplication.shared.open(url)
                             }
                         }
-                        .font(.cutiveMono(18))
+                        .font(.appBody)
                         .foregroundColor(.appDarkGray)
                     }
                 }
@@ -625,28 +625,28 @@ struct BottomInfoPanel: View {
             case .overall:
                 if cassettes.isEmpty {
                     Text("no cassettes yet!")
-                        .font(.cutiveMono(24))
+                        .font(.appHeader)
                         .foregroundColor(.appBlack)
                         .frame(height: 30)
                     Text("add a new cassette")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                     Text("with your b-cuts")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                 } else {
                     Text("\(cassettes.count) cassettes")
-                        .font(.cutiveMono(24))
+                        .font(.appHeader)
                         .foregroundColor(.appBlack)
                         .frame(height: 30)
                     Text(overallDateRange)
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                     Text("\(totalPhotos) photos")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                 }
@@ -660,15 +660,15 @@ struct BottomInfoPanel: View {
             case .cassette:
                 if let c = mainCassette {
                     Text(c.name)
-                        .font(.cutiveMono(24))
+                        .font(.appHeader)
                         .foregroundColor(.appBlack)
                         .frame(height: 30)
                     Text(cassettePhotoDateRange)
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                     Text("\(c.photos.count) photos")
-                        .font(.cutiveMono(16))
+                        .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
                     Text(c.isExpired ? "expired" : "\(c.daysLeft) days left")

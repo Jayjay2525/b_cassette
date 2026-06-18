@@ -5,6 +5,7 @@ class NewCassetteData: ObservableObject {
     @Published var selectedPhotos: [BCutPhoto] = []
     @Published var name: String = ""
     @Published var keywords: [String] = []
+    @Published var suggestedKeywords: [String] = []  // Claude 추출 키워드
     @Published var design: CassetteDesign = .d1
     @Published var shouldDismiss: Bool = false
     var expiresAt: Date = Date().addingTimeInterval(86400 * 30)  // 30일 후

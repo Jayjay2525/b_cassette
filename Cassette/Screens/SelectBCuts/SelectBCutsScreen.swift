@@ -16,6 +16,8 @@ struct SelectBCutsScreen: View {
     @State private var allLoaded: Bool = false
     @State private var showToast: Bool = false
     @State private var navigateToDetail: Bool = false
+    @State private var isProcessing: Bool = false
+    @State private var processingProgress: Double = 0.0
     private let pageSize: Int = 100
 
     private let mainWidth: CGFloat = 297
@@ -52,7 +54,7 @@ struct SelectBCutsScreen: View {
                 Spacer()
                 Text("select b-cuts")
 
-                    .font(.cutiveMono(20))
+                    .font(.appTitle)
                     .foregroundColor(.appBlack)
                 Spacer()
                 Button { showExitAlert = true } label: {
@@ -142,7 +144,7 @@ struct SelectBCutsScreen: View {
 
                         // ── 날짜 ──
                         Text(currentDateString)
-                            .font(.cutiveMono(16))
+                            .font(.appBody)
                             .foregroundColor(.appDarkGray)
                             .frame(maxWidth: .infinity)
                             .offset(y: topPadding + cardHeight + 16)
@@ -177,36 +179,30 @@ struct SelectBCutsScreen: View {
                         withAnimation(.easeOut(duration: 0.3)) { showToast = false }
                     }
                 } else {
-                    navigateToDetail = true
+                    startProcessing()
                 }
             } label: {
                 Text("next")
-                    .font(.cutiveMono(18))
+                    .font(.appBody)
                     .foregroundColor(.appWhite)
-                    .frame(width: 183, height: 48)
+                    .frame(width: 201, height: 48)
                     .background(Capsule().fill(isDisabled ? Color(hex: "#B3B3B3") : Color(hex: "#555555")))
             }
-            .navigationDestination(isPresented: $navigateToDetail) {
-                SelectDetailScreen()
-                    .environmentObject(appState)
-                    .environmentObject(cassetteData)
-            }
-
             Spacer()
 
             Text("\(cassetteData.selectedPhotos.count)/\(AppConstants.maxBCuts)")
-                .font(.cutiveMono(13))
+                .font(.appMicro)
                 .foregroundColor(isAtLimit ? .appAccent : .appBlack)
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(Color.appWhite))
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 41)
+        .padding(.bottom, 11)
 
         // 토스트
         if showToast {
             Text("select at least 5 images!")
-                .font(.cutiveMono(14))
+                .font(.appMicro)
                 .foregroundColor(.appWhite)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -217,7 +213,18 @@ struct SelectBCutsScreen: View {
                 .zIndex(999)
                 .allowsHitTesting(false)
         }
+        // 로딩 오버레이
+        if isProcessing {
+            FilmProcessingView(progress: processingProgress)
+                .transition(.opacity)
+                .zIndex(1000)
+        }
         } // ZStack 닫기
+        .navigationDestination(isPresented: $navigateToDetail) {
+            SelectDetailScreen()
+                .environmentObject(appState)
+                .environmentObject(cassetteData)
+        }
         .navigationBarHidden(true)
         .onAppear { requestPhotoAccess() }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
@@ -234,19 +241,82 @@ struct SelectBCutsScreen: View {
         VStack(spacing: 12) {
             if authStatus == .denied || authStatus == .restricted {
                 Text("photos access denied")
-                    .font(.cutiveMono(14))
+                    .font(.appMicro)
                     .foregroundColor(.appGray)
                 Text("enable in Settings → Privacy → Photos")
-                    .font(.cutiveMono(12))
+                    .font(.appMicro)
                     .foregroundColor(.appGray)
                     .multilineTextAlignment(.center)
             } else {
                 Text("loading photos...")
-                    .font(.cutiveMono(14))
+                    .font(.appMicro)
                     .foregroundColor(.appGray)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Processing
+
+    func startProcessing() {
+        withAnimation(.easeIn(duration: 0.2)) { isProcessing = true }
+        processingProgress = 0.0
+
+        let photos = cassetteData.selectedPhotos
+        let cassetteID = cassetteData.cassetteID
+        let total = photos.count
+        var savedPhotos: [BCutPhoto] = Array(repeating: photos[0], count: total)
+        let group = DispatchGroup()
+
+        // 1. 로컬 저장 (병렬)
+        for (i, photo) in photos.enumerated() {
+            guard case .asset(let id) = photo.imageSource else {
+                savedPhotos[i] = photo
+                continue
+            }
+            let result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+            guard let asset = result.firstObject else {
+                savedPhotos[i] = photo
+                continue
+            }
+            group.enter()
+            appState.saveBCut(asset: asset, cassetteID: cassetteID, isBCut: photo.isBCut) { saved in
+                savedPhotos[i] = saved ?? photo
+                DispatchQueue.main.async {
+                    processingProgress = min(0.7, processingProgress + 0.7 / Double(total))
+                }
+                group.leave()
+            }
+        }
+
+        // 2. 로컬 저장 완료 후 Claude API 호출
+        group.notify(queue: .main) {
+            cassetteData.selectedPhotos = savedPhotos
+            processingProgress = 0.7
+
+            // 저장된 파일에서 이미지 로드해서 Claude API에 전달
+            let filePhotos = savedPhotos.prefix(50)
+            var images: [UIImage] = []
+            for photo in filePhotos {
+                if case .file(let url) = photo.imageSource,
+                   let img = UIImage(contentsOfFile: url.path) {
+                    images.append(img)
+                }
+            }
+
+            Task {
+                let keywords = (try? await ClaudeAPIService.extractKeywords(from: images)) ?? []
+                await MainActor.run {
+                    cassetteData.suggestedKeywords = keywords
+                    processingProgress = 1.0
+                }
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                await MainActor.run {
+                    isProcessing = false
+                    navigateToDetail = true
+                }
+            }
+        }
     }
 
     // MARK: - Helpers

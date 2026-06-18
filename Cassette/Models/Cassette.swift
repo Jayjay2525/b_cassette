@@ -105,14 +105,16 @@ class AppState: ObservableObject {
         let photoID = UUID()
         let destURL = localURL(cassetteID: cassetteID, photoID: photoID)
 
-        // 원본 데이터 요청
         let options = PHImageRequestOptions()
-        options.version = .original
+        options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true
         options.isSynchronous = false
 
-        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-            guard let data else {
+        // 1080px 기준으로 리사이즈해서 요청
+        let targetSize = CGSize(width: 1080, height: 1080)
+        PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFit, options: options) { image, _ in
+            guard let image,
+                  let jpegData = image.jpegData(compressionQuality: 0.75) else {
                 completion(nil)
                 return
             }
@@ -121,7 +123,7 @@ class AppState: ObservableObject {
                     at: destURL.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
-                try data.write(to: destURL)
+                try jpegData.write(to: destURL)
                 let photo = BCutPhoto(
                     id: photoID,
                     imageSource: .file(destURL),

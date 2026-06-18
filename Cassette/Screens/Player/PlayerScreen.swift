@@ -7,7 +7,7 @@ struct PlayerScreen: View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
             Text("Player Screen")
-                .font(.cutiveMono(20))
+                .font(.appTitle)
         }
     }
 }
