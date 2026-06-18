@@ -2,6 +2,14 @@ import SwiftUI
 import Combine
 import Photos
 
+// MARK: - CassetteStatus
+
+enum CassetteStatus: String, Codable {
+    case generating
+    case completed
+    case failed
+}
+
 // MARK: - CassetteModel
 
 struct CassetteModel: Identifiable {
@@ -14,6 +22,8 @@ struct CassetteModel: Identifiable {
     var design: CassetteDesign
     var printProgress: Double  // 0.0 → 1.0 (현상 애니메이션)
     var trackName: String      // 로컬 사운드 파일 이름 (확장자 포함)
+    var status: CassetteStatus = .completed
+    var taskId: String? = nil
 
     var daysLeft: Int {
         let diff = Calendar.current.dateComponents([.day], from: Date(), to: expiresAt).day ?? 0

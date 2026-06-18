@@ -263,7 +263,7 @@ struct SelectDetailScreen: View {
                     .background(Capsule().fill(Color(hex: "#555555")))
             }
             .navigationDestination(isPresented: $navigateToDesign) {
-                SelectDesignScreen()
+                SelectTypeScreen()
                     .environmentObject(appState)
                     .environmentObject(cassetteData)
             }

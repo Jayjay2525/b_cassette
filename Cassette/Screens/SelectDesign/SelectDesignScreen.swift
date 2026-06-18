@@ -7,8 +7,8 @@ struct SelectDesignScreen: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var showExitAlert = false
+    @State private var showDeleteAlert = false
     @State private var isSaving = false
-    @State private var originalIdentifiers: [String] = []
     @State private var currentIndex: Int = 0
     @State private var dragY: CGFloat = 0
     @State private var showToast = false
@@ -134,41 +134,8 @@ struct SelectDesignScreen: View {
             VStack(spacing: 0) {
                 Button {
                     guard !isSaving else { return }
-                    isSaving = true
                     cassetteData.design = designs[currentIndex]
-                    originalIdentifiers = cassetteData.selectedPhotos.compactMap {
-                        if case .asset(let id) = $0.imageSource { return id }
-                        return nil
-                    }
-
-                    // 1. 로컬 저장 먼저 (PHAsset 살아있을 때)
-                    let originalPhotos = cassetteData.selectedPhotos
-                    savePhotosLocally {
-                        // 2. Photos 삭제 요청
-                        let ids = originalIdentifiers
-                        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
-                        var assets: [PHAsset] = []
-                        result.enumerateObjects { asset, _, _ in assets.append(asset) }
-
-                        appState.deleteFromPhotos(assets: assets) { success in
-                            guard success else {
-                                // Don't Allow → 로컬 파일 + selectedPhotos 원상복원
-                                appState.deleteLocalFiles(cassetteID: cassetteData.cassetteID)
-                                cassetteData.selectedPhotos = originalPhotos
-                                isSaving = false
-                                withAnimation(.easeIn(duration: 0.2)) { showToast = true }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                                    withAnimation(.easeOut(duration: 0.3)) { showToast = false }
-                                }
-                                return
-                            }
-                            // 3. 삭제 성공 시 카세트 생성
-                            let newCassette = cassetteData.buildCassette()
-                            appState.addCassette(newCassette)
-                            isSaving = false
-                            cassetteData.shouldDismiss = true
-                        }
-                    }
+                    showDeleteAlert = true
                 } label: {
                     Group {
                         if isSaving {
@@ -199,9 +166,41 @@ struct SelectDesignScreen: View {
         } message: {
             Text("Your cassette won't be saved.")
         }
+        .alert("delete photos from library?", isPresented: $showDeleteAlert) {
+            Button("delete", role: .destructive) { deleteAndFinish() }
+            Button("cancel", role: .cancel) { }
+        } message: {
+            Text("Your b-cuts will be deleted from Photos to create this cassette.")
+        }
     }
 
-    // MARK: - 로컬 저장
+    private func deleteAndFinish() {
+        isSaving = true
+        let ids = cassetteData.selectedPhotos.compactMap { photo -> String? in
+            if case .asset(let id) = photo.imageSource { return id }
+            return nil
+        }
+        let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+        var assets: [PHAsset] = []
+        result.enumerateObjects { asset, _, _ in assets.append(asset) }
+
+        appState.deleteFromPhotos(assets: assets) { success in
+            guard success else {
+                isSaving = false
+                withAnimation(.easeIn(duration: 0.2)) { showToast = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    withAnimation(.easeOut(duration: 0.3)) { showToast = false }
+                }
+                return
+            }
+            let newCassette = cassetteData.buildCassette()
+            appState.addCassette(newCassette)
+            isSaving = false
+            cassetteData.shouldDismiss = true
+        }
+    }
+
+    // MARK: - 로컬 저장 (레거시 — 미사용)
 
     private func savePhotosLocally(completion: @escaping () -> Void) {
         let photos = cassetteData.selectedPhotos
