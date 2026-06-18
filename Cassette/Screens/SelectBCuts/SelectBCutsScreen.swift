@@ -51,6 +51,7 @@ struct SelectBCutsScreen: View {
                 Color.clear.frame(width: 24, height: 24)
                 Spacer()
                 Text("select b-cuts")
+
                     .font(.cutiveMono(20))
                     .foregroundColor(.appBlack)
                 Spacer()

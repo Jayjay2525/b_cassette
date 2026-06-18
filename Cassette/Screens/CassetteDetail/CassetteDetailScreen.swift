@@ -16,6 +16,8 @@ struct CassetteDetailScreen: View {
     @State private var showDeleteAlert: Bool = false
     @State private var showRevertAlert: Bool = false
     @State private var player: AVAudioPlayer? = nil
+    @State private var filmManualOffset: CGFloat = 0
+    @State private var filmDragTranslation: CGFloat = 0
 
     // MARK: - Timer
     private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
@@ -229,7 +231,15 @@ struct CassetteDetailScreen: View {
                     .onChanged { v in
                         let ratio = max(0, min(1, Double(v.location.x / indicatorWidth)))
                         playProgress = ratio
-                        if let player { player.currentTime = ratio * player.duration }
+                        player?.pause()
+                    }
+                    .onEnded { v in
+                        let ratio = max(0, min(1, Double(v.location.x / indicatorWidth)))
+                        playProgress = ratio
+                        if let player {
+                            player.currentTime = ratio * player.duration
+                            if isPlaying { player.play() }
+                        }
                     }
             )
 
@@ -256,6 +266,10 @@ struct CassetteDetailScreen: View {
                 } else {
                     player?.play()
                     isPlaying = true
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        filmManualOffset = 0
+                        filmDragTranslation = 0
+                    }
                 }
             }
         } label: {
@@ -271,7 +285,7 @@ struct CassetteDetailScreen: View {
         guard components.count == 2,
               let url = Bundle.main.url(forResource: components[0], withExtension: components[1]) else { return }
         do {
-            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .mixWithOthers)
             try AVAudioSession.sharedInstance().setActive(true)
             player = try AVAudioPlayer(contentsOf: url)
             player?.prepareToPlay()
@@ -315,13 +329,33 @@ struct CassetteDetailScreen: View {
                         .font(.cutiveMono(13))
                         .foregroundColor(.appWhite)
                 } else {
+                    let autoOffset = filmOffset(screenWidth: geo.size.width, totalFilmWidth: totalFilmWidth)
+                    let startOffset = totalFilmWidth / 2 - geo.size.width / 2
+                    let endOffset   = geo.size.width / 2 - totalFilmWidth / 2
+                    let minManual = endOffset - autoOffset
+                    let maxManual = startOffset - autoOffset
+                    let clampedManual = min(maxManual, max(minManual, filmManualOffset + filmDragTranslation))
                     HStack(spacing: gap) {
                         ForEach(bCuts) { photo in
                             BCutImageView(source: photo.imageSource, width: photoWidth, height: photoHeight)
                         }
                     }
-                    .offset(x: filmOffset(screenWidth: geo.size.width, totalFilmWidth: totalFilmWidth))
-                    .animation(.linear(duration: 0.05), value: playProgress)
+                    .offset(x: autoOffset + (isPlaying ? 0 : clampedManual))
+                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: playProgress)
+                    .gesture(
+                        DragGesture(minimumDistance: 4)
+                            .onChanged { v in
+                                if !isPlaying {
+                                    filmDragTranslation = v.translation.width
+                                }
+                            }
+                            .onEnded { v in
+                                if !isPlaying {
+                                    filmManualOffset = min(maxManual, max(minManual, filmManualOffset + v.translation.width))
+                                    filmDragTranslation = 0
+                                }
+                            }
+                    )
                 }
             }
             .frame(width: geo.size.width, height: filmStripHeight)

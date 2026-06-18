@@ -43,7 +43,7 @@ struct SelectDesignScreen: View {
                             .frame(width: 24, height: 24)
                     }
                     Spacer()
-                    Text("select design")
+                    Text("make a cassette")
                         .font(.cutiveMono(20))
                         .foregroundColor(.appBlack)
                     Spacer()

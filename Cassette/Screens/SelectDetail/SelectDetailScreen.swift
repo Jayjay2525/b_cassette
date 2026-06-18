@@ -7,10 +7,11 @@ struct SelectDetailScreen: View {
 
     @State private var showExitAlert: Bool = false
     @State private var navigateToDesign: Bool = false
-    @State private var keywordInput: String = ""
-    @State private var isEditingName: Bool = false
+    @State private var keywordInput1: String = ""
+    @State private var keywordInput2: String = ""
     @FocusState private var nameFieldFocused: Bool
-    @FocusState private var keywordFieldFocused: Bool
+    @FocusState private var keyword1Focused: Bool
+    @FocusState private var keyword2Focused: Bool
 
     private let fmt: DateFormatter = {
         let f = DateFormatter()
@@ -18,7 +19,6 @@ struct SelectDetailScreen: View {
         return f
     }()
 
-    // 선택된 사진들의 날짜 범위
     var dateRangeString: String {
         let dates = cassetteData.selectedPhotos.map { $0.takenAt }
         guard let earliest = dates.min(), let latest = dates.max() else { return "--" }
@@ -30,6 +30,7 @@ struct SelectDetailScreen: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+        ScrollView(showsIndicators: false) {
         VStack(spacing: 0) {
 
             // ── 1. Navbar ──
@@ -40,7 +41,7 @@ struct SelectDetailScreen: View {
                         .frame(width: 24, height: 24)
                 }
                 Spacer()
-                Text("select detail")
+                Text("make a film")
                     .font(.cutiveMono(20))
                     .foregroundColor(.appBlack)
                 Spacer()
@@ -52,9 +53,17 @@ struct SelectDetailScreen: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
-            .padding(.bottom, 20)
+            .padding(.bottom, 16)
 
-            // ── 2. 이름 수정 TextField ──
+            // ── 2. title ──
+            Text("title")
+                .font(.cutiveMono(16))
+                .foregroundColor(.appBlack)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+
+            // ── 3. 이름 입력 ──
             HStack(spacing: 12) {
                 Color.clear.frame(width: 24, height: 24)
 
@@ -72,7 +81,6 @@ struct SelectDetailScreen: View {
                     .frame(width: 289, height: 36)
 
                 Button {
-                    isEditingName = true
                     nameFieldFocused = true
                 } label: {
                     Image(systemName: "pencil")
@@ -83,29 +91,95 @@ struct SelectDetailScreen: View {
             }
             .padding(.bottom, 16)
 
-            // ── 3. 날짜 메타데이터 ──
+            // ── 4. 날짜 ──
             Text(dateRangeString)
                 .font(.cutiveMono(16))
                 .foregroundColor(.appDarkGray)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 20)
+
+            // ── 5. 구분선 ──
+            Rectangle()
+                .fill(Color(hex: "#B4B4B4"))
+                .frame(height: 1)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+
+            // ── 6. 키워드 ──
+            Text("keyword")
+                .font(.cutiveMono(16))
+                .foregroundColor(.appBlack)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 16)
 
-            // ── 4. 사진 개수 ──
-            VStack(spacing: 4) {
+            VStack(spacing: 12) {
+                // keyword 1
+                HStack(spacing: 12) {
+                    Color.clear.frame(width: 24, height: 24)
+                    TextField(text: $keywordInput1, prompt: Text("summer").foregroundColor(.appGray)) { }
+                        .font(.cutiveMono(16))
+                        .foregroundColor(.appBlack)
+                        .multilineTextAlignment(.center)
+                        .focused($keyword1Focused)
+                        .lineLimit(1)
+                        .frame(width: 220, height: 36)
+                        .background(Capsule().fill(Color.appWhite))
+                        .onChange(of: keywordInput1) { _, val in updateKeywords() }
+                    Button { keyword1Focused = true } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 18))
+                            .foregroundColor(.appBlack)
+                    }
+                    .frame(width: 24, height: 24)
+                }
+
+                // keyword 2
+                HStack(spacing: 12) {
+                    Color.clear.frame(width: 24, height: 24)
+                    TextField(text: $keywordInput2, prompt: Text("friends").foregroundColor(.appGray)) { }
+                        .font(.cutiveMono(16))
+                        .foregroundColor(.appBlack)
+                        .multilineTextAlignment(.center)
+                        .focused($keyword2Focused)
+                        .lineLimit(1)
+                        .frame(width: 220, height: 36)
+                        .background(Capsule().fill(Color.appWhite))
+                        .onChange(of: keywordInput2) { _, val in updateKeywords() }
+                    Button { keyword2Focused = true } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 18))
+                            .foregroundColor(.appBlack)
+                    }
+                    .frame(width: 24, height: 24)
+                }
+            }
+            .padding(.bottom, 20)
+
+            // ── 7. 구분선 ──
+            Rectangle()
+                .fill(Color(hex: "#B4B4B4"))
+                .frame(height: 1)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+
+            // ── 8. 사진 개수 ──
+            HStack(spacing: 8) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(Color.appWhite)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 33, height: 29)
                     Text("\(cassetteData.selectedPhotos.count)")
-                        .font(.cutiveMono(24))
+                        .font(.cutiveMono(16))
                         .foregroundColor(.appBlack)
                 }
                 Text("photos")
                     .font(.cutiveMono(16))
-                    .foregroundColor(.appDarkGray)
+                    .foregroundColor(.appBlack)
             }
-            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.bottom, 16)
 
-            // ── 5. 필름 스트립 ZStack ──
+            // ── 9. 필름 스트립 ──
             GeometryReader { geo in
                 ZStack {
                     Image("film")
@@ -125,77 +199,13 @@ struct SelectDetailScreen: View {
                 }
             }
             .frame(height: 228)
-            .padding(.bottom,24)
 
-            // ── 6. 키워드 ──
-            VStack(spacing: 12) {
-                Text("keywords\n(optional)")
-                    .font(.cutiveMono(16))
-                    .foregroundColor(.appBlack)
-                    .multilineTextAlignment(.center)
-
-                VStack(spacing: 10) {
-                    ForEach(cassetteData.keywords, id: \.self) { kw in
-                        HStack(spacing: 8) {
-                            HStack {
-                                Spacer()
-                                Text(kw)
-                                    .font(.cutiveMono(16))
-                                    .foregroundColor(.appBlack)
-                                Spacer()
-                            }
-                            .frame(maxWidth: 180)
-                            .frame(height: 42)
-                            .background(Capsule().fill(Color.appGray.opacity(0.5)))
-                            .onTapGesture {
-                                keywordInput = kw
-                                cassetteData.keywords.removeAll { $0 == kw }
-                                keywordFieldFocused = true
-                            }
-
-                            Button {
-                                cassetteData.keywords.removeAll { $0 == kw }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.appGray)
-                            }
-                        }
-                    }
-
-                    if cassetteData.keywords.count < 2 {
-                        HStack {
-                            TextField("add keyword", text: $keywordInput)
-                                .font(.cutiveMono(16))
-                                .foregroundColor(.appBlack)
-                                .multilineTextAlignment(.center)
-                                .focused($keywordFieldFocused)
-                                .onSubmit { addKeyword() }
-
-                            if !keywordInput.isEmpty {
-                                Button { addKeyword() } label: {
-                                    Image(systemName: "return")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.appBlack)
-                                }
-                                .padding(.trailing, 16)
-                            }
-                        }
-                        .frame(maxWidth: 180)
-                        .frame(height: 42)
-                        .background(
-                            Capsule()
-                                .strokeBorder(Color.appGray, lineWidth: 1)
-                        )
-                    }
-                }
-            }
-
-            Spacer()
+            Spacer().frame(height: 120)
+        }
         }
         .background(Color.appBackground.ignoresSafeArea())
 
-        // ── 7. Next 버튼 (ZStack 최상단 고정) ──
+        // ── Next 버튼 고정 ──
         VStack(spacing: 0) {
             Button {
                 if cassetteData.name.isEmpty {
@@ -222,6 +232,7 @@ struct SelectDetailScreen: View {
         .ignoresSafeArea(.keyboard)
         .navigationBarHidden(true)
         .onTapGesture { hideKeyboard() }
+        .onAppear { loadKeywords() }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
@@ -230,15 +241,21 @@ struct SelectDetailScreen: View {
         }
     }
 
-    private func addKeyword() {
-        let kw = keywordInput.trimmingCharacters(in: .whitespaces)
-        guard !kw.isEmpty, !cassetteData.keywords.contains(kw), cassetteData.keywords.count < 2 else { return }
-        cassetteData.keywords.append(kw)
-        keywordInput = ""
+    private func loadKeywords() {
+        if cassetteData.keywords.count > 0 { keywordInput1 = cassetteData.keywords[0] }
+        if cassetteData.keywords.count > 1 { keywordInput2 = cassetteData.keywords[1] }
+    }
+
+    private func updateKeywords() {
+        var kws: [String] = []
+        let k1 = keywordInput1.trimmingCharacters(in: .whitespaces)
+        let k2 = keywordInput2.trimmingCharacters(in: .whitespaces)
+        if !k1.isEmpty { kws.append(k1) }
+        if !k2.isEmpty { kws.append(k2) }
+        cassetteData.keywords = kws
     }
 
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
-
