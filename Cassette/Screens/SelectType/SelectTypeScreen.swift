@@ -36,7 +36,7 @@ struct SelectTypePopup: View {
 
                 // ── 버튼 1: normal cassette ──
                 Button { onSelect(false) } label: {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Text("normal cassette")
                             .font(.appBody)
                             .foregroundColor(.appBlack)
@@ -58,10 +58,10 @@ struct SelectTypePopup: View {
                 }
 
                 // ── 버튼 2: special cassette ──
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     Button { handleSpecial() } label: {
                         ZStack {
-                            VStack(spacing: 8) {
+                            VStack(spacing: 10) {
                                 Text("special cassette")
                                     .font(.appBody)
                                     .foregroundColor(.appWhite)
@@ -78,6 +78,12 @@ struct SelectTypePopup: View {
                                     .foregroundColor(.appWhite.opacity(0.7))
                             }
                             .padding(.vertical, 10)
+
+                            Image("sparkles")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 233)
+                                .allowsHitTesting(false)
 
                             if isSigningIn {
                                 ProgressView()
