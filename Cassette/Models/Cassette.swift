@@ -12,7 +12,7 @@ enum CassetteStatus: String, Codable {
 
 // MARK: - CassetteModel
 
-struct CassetteModel: Identifiable {
+struct CassetteModel: Identifiable, Codable {
     let id: UUID
     var name: String
     var createdAt: Date
@@ -45,15 +45,46 @@ struct CassetteModel: Identifiable {
 
 // MARK: - Image Source
 
-enum BCutImageSource {
-    case asset(String)   // 개발용 mock (에셋 카탈로그 이름)
-    case file(URL)       // 실제 유저 데이터 (Documents 저장 경로)
-    // 추후: case remote(URL)  // 클라우드 URL
+enum BCutImageSource: Codable {
+    case asset(String)
+    case file(URL)
+
+    private static var documentsURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+
+    enum CodingKeys: String, CodingKey { case type, value }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try c.decode(String.self, forKey: .type)
+        let value = try c.decode(String.self, forKey: .value)
+        if type == "asset" {
+            self = .asset(value)
+        } else {
+            self = .file(Self.documentsURL.appendingPathComponent(value))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .asset(let name):
+            try c.encode("asset", forKey: .type)
+            try c.encode(name, forKey: .value)
+        case .file(let url):
+            let relative = url.path.replacingOccurrences(
+                of: Self.documentsURL.path + "/", with: ""
+            )
+            try c.encode("file", forKey: .type)
+            try c.encode(relative, forKey: .value)
+        }
+    }
 }
 
 // MARK: - BCutPhoto
 
-struct BCutPhoto: Identifiable {
+struct BCutPhoto: Identifiable, Codable {
     let id: UUID
     var imageSource: BCutImageSource
     var isBCut: Bool
@@ -62,7 +93,7 @@ struct BCutPhoto: Identifiable {
 
 // MARK: - CassetteDesign
 
-enum CassetteDesign: String, CaseIterable {
+enum CassetteDesign: String, CaseIterable, Codable {
     case d1 = "cassette_1"
     case d2 = "cassette_2"
     case d3 = "cassette_3"
@@ -79,8 +110,28 @@ enum CassetteDesign: String, CaseIterable {
 // MARK: - App State
 
 class AppState: ObservableObject {
-    @Published var cassettes: [CassetteModel] = []
+    @Published var cassettes: [CassetteModel] = [] {
+        didSet { saveCassettes() }
+    }
     @Published var selectedCassetteID: UUID? = nil
+
+    private let cassettesKey = "saved_cassettes"
+
+    init() {
+        loadCassettes()
+    }
+
+    private func saveCassettes() {
+        if let data = try? JSONEncoder().encode(cassettes) {
+            UserDefaults.standard.set(data, forKey: cassettesKey)
+        }
+    }
+
+    private func loadCassettes() {
+        guard let data = UserDefaults.standard.data(forKey: cassettesKey),
+              let saved = try? JSONDecoder().decode([CassetteModel].self, from: data) else { return }
+        cassettes = saved
+    }
 
     var isFull: Bool { cassettes.count >= AppConstants.maxCassettes }
 
@@ -88,6 +139,34 @@ class AppState: ObservableObject {
 
     func addCassette(_ cassette: CassetteModel) {
         cassettes.append(cassette)
+        if cassette.status == .generating {
+            startMusicGeneration(for: cassette)
+        }
+    }
+
+    private func startMusicGeneration(for cassette: CassetteModel) {
+        let cassetteID = cassette.id
+        let keywords = cassette.keywords
+        let photoCount = cassette.photos.count
+        print("[AppState] startMusicGeneration — cassetteID: \(cassetteID), keywords: \(keywords)")
+        Task {
+            let taskId = await MusicGPTService.requestGeneration(
+                keywords: keywords,
+                photoCount: photoCount,
+                cassetteID: cassetteID
+            )
+            guard let taskId else {
+                print("[AppState] MusicGPT returned no taskId, aborting")
+                return
+            }
+            print("[AppState] taskId received: \(taskId), saving to cassette")
+            await MainActor.run {
+                if let idx = cassettes.firstIndex(where: { $0.id == cassetteID }) {
+                    cassettes[idx].taskId = taskId
+                }
+            }
+            await SupabaseManager.shared.pollUntilComplete(taskId: taskId, cassetteID: cassetteID, appState: self)
+        }
     }
 
     func updateCassetteStatus(id: UUID, status: CassetteStatus) {
@@ -105,8 +184,8 @@ class AppState: ObservableObject {
 
     /// 만료된 카세트 자동 정리 (앱 시작 시 호출)
     func purgeExpiredCassettes() {
-        let expired = cassettes.filter { $0.isExpired }
-        expired.forEach { deleteCassette(id: $0.id) }
+        // 만료는 UI 상태만 변경 (revert 버튼 비활성화 등)
+        // 파일 삭제 없음 — 사용자가 Photos 앱에서 직접 복구할 수 있도록 유지
     }
 
     // MARK: - B-cut 저장 (Photos → Documents)

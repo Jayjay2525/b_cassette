@@ -7,7 +7,6 @@ struct SelectDetailScreen: View {
 
     @State private var showExitAlert: Bool = false
     @State private var navigateToDesign: Bool = false
-    @State private var showTypePopup: Bool = false
     @State private var keywordInput1: String = ""
     @State private var keywordInput2: String = ""
     @State private var keywordInput3: String = ""
@@ -260,7 +259,7 @@ struct SelectDetailScreen: View {
                     cassetteData.name = "cassette \(appState.cassettes.count + 1)"
                 }
                 updateKeywords()
-                withAnimation(.easeOut(duration: 0.25)) { showTypePopup = true }
+                navigateToDesign = true
             } label: {
                 Text("next")
                     .font(.appBody)
@@ -278,31 +277,6 @@ struct SelectDetailScreen: View {
         .frame(maxWidth: .infinity)
         .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
 
-        // ── Type 선택 오버레이 ──
-        if showTypePopup {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.easeIn(duration: 0.2)) { showTypePopup = false }
-                }
-                .transition(.opacity)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            SelectTypePopup(
-                onDismiss: {
-                    withAnimation(.easeIn(duration: 0.2)) { showTypePopup = false }
-                },
-                onSelect: { isSpecial in
-                    cassetteData.isSpecial = isSpecial
-                    showTypePopup = false
-                    navigateToDesign = true
-                }
-            )
-            .environmentObject(appState)
-            .environmentObject(cassetteData)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-        }
 
         } // 안쪽 ZStack 닫기
         } // 바깥 ZStack 닫기

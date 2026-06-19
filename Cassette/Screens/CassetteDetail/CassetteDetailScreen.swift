@@ -283,9 +283,8 @@ struct CassetteDetailScreen: View {
     }
 
     private func setupPlayer() {
-        let components = cassette.trackName.components(separatedBy: ".")
-        guard components.count == 2,
-              let url = Bundle.main.url(forResource: components[0], withExtension: components[1]) else { return }
+        let url = resolveTrackURL()
+        guard let url else { return }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .mixWithOthers)
             try AVAudioSession.sharedInstance().setActive(true)
@@ -294,6 +293,20 @@ struct CassetteDetailScreen: View {
         } catch {
             print("audio setup error: \(error)")
         }
+    }
+
+    private func resolveTrackURL() -> URL? {
+        let trackName = cassette.trackName
+        // Documents에 저장된 파일 우선 확인 (special cassette)
+        let localURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("cassettes/\(cassette.id.uuidString)/\(trackName)")
+        if FileManager.default.fileExists(atPath: localURL.path) {
+            return localURL
+        }
+        // Bundle에서 찾기 (일반 cassette)
+        let components = trackName.components(separatedBy: ".")
+        guard components.count == 2 else { return nil }
+        return Bundle.main.url(forResource: components[0], withExtension: components[1])
     }
 
     // MARK: - Film Strip

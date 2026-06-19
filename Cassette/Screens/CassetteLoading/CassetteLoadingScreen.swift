@@ -3,15 +3,13 @@ import Combine
 import Lottie
 
 struct CassetteLoadingScreen: View {
+    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var cassetteData: NewCassetteData
 
     @State private var navigateToDesign = false
     @State private var progress: Double = 0.0
     @State private var dotCount = 0
-    @State private var showSkip = false
-    @State private var taskId: String? = nil
-    @State private var pollingTask: Task<Void, Never>? = nil
 
     private let dotTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
@@ -45,29 +43,6 @@ struct CassetteLoadingScreen: View {
                 }
 
                 Spacer()
-
-                if showSkip {
-                    VStack(spacing: 16) {
-                        Text("taking longer than expected..\nhow about picking a design first?")
-                            .font(.appMicro)
-                            .foregroundColor(.appDarkGray)
-                            .multilineTextAlignment(.center)
-                            .padding(.bottom, 16)
-
-                        Button {
-                            pollingTask?.cancel()
-                            navigateToDesign = true
-                        } label: {
-                            Text("next")
-                                .font(.appBody)
-                                .foregroundColor(.appWhite)
-                                .frame(width: 201, height: 48)
-                                .background(Capsule().fill(Color.appDarkGray))
-                        }
-                    }
-                    .transition(.opacity)
-                }
-
                 Spacer().frame(height: 11)
             }
         }
@@ -77,80 +52,19 @@ struct CassetteLoadingScreen: View {
                 .environmentObject(appState)
                 .environmentObject(cassetteData)
         }
-        .onDisappear {
-            pollingTask?.cancel()
-        }
-        .onReceive(dotTimer) { _ in
+.onReceive(dotTimer) { _ in
             dotCount = (dotCount + 1) % 3
         }
         .onAppear {
-            if cassetteData.isSpecial {
-                startSpecialFlow()
-            } else {
-                startNormalFlow()
-            }
-        }
-    }
-
-    // MARK: - Normal: 10초 타이머 후 자동 이동
-    private func startNormalFlow() {
-        Task {
-            for i in 1...100 {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                await MainActor.run {
-                    progress = Double(i) / 100.0
-                }
-            }
-            await MainActor.run { navigateToDesign = true }
-        }
-    }
-
-    // MARK: - Special: MusicGPT 호출 + polling
-    private func startSpecialFlow() {
-        Task {
-            // 0→70%를 15초에 걸쳐 채움
-            let steps = 150
-            for i in 1...steps {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                await MainActor.run {
-                    progress = 0.7 * Double(i) / Double(steps)
-                }
-            }
-
-            // 70% 도달 후 안내 문구 + next 버튼 표시
-            await MainActor.run {
-                withAnimation { showSkip = true }
-            }
-
-            // MusicGPT 요청
-            let id = await MusicGPTService.requestGeneration(
-                keywords: cassetteData.keywords,
-                photoCount: cassetteData.selectedPhotos.count,
-                cassetteID: cassetteData.cassetteID
-            )
-            await MainActor.run {
-                taskId = id
-                cassetteData.musicTaskId = id
-            }
-
-            // 완료될 때까지 3초마다 polling
-            guard let id else { return }
-            pollingTask = Task {
-                while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: 7_000_000_000)
-                    let music = try? await SupabaseManager.shared.fetchCassetteMusic(taskId: id)
-                    if music?.status == "completed" {
-                        await MainActor.run {
-                            cassetteData.musicCompleted = true
-                            withAnimation(.linear(duration: 0.5)) { progress = 1.0 }
-                        }
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        await MainActor.run { navigateToDesign = true }
-                        return
+            Task {
+                for i in 1...40 {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    await MainActor.run {
+                        progress = Double(i) / 40.0
                     }
                 }
+                await MainActor.run { navigateToDesign = true }
             }
         }
     }
 }
-

@@ -8,8 +8,10 @@ struct CassetteImageView: View {
 
     var body: some View {
         Group {
-            if let path = cassette.customImagePath,
-               let uiImage = UIImage(contentsOfFile: path) {
+            if let relativePath = cassette.customImagePath,
+               let uiImage = UIImage(contentsOfFile: FileManager.default
+                   .urls(for: .documentDirectory, in: .userDomainMask)[0]
+                   .appendingPathComponent(relativePath).path) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: contentMode)
