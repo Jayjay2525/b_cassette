@@ -4,7 +4,7 @@ import Photos
 
 // MARK: - CassetteStatus
 
-enum CassetteStatus: String, Codable {
+enum CassetteStatus: String, Codable, Equatable {
     case generating
     case completed
     case failed
@@ -12,7 +12,7 @@ enum CassetteStatus: String, Codable {
 
 // MARK: - CassetteModel
 
-struct CassetteModel: Identifiable, Codable {
+struct CassetteModel: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var createdAt: Date
@@ -45,7 +45,7 @@ struct CassetteModel: Identifiable, Codable {
 
 // MARK: - Image Source
 
-enum BCutImageSource: Codable {
+enum BCutImageSource: Codable, Equatable {
     case asset(String)
     case file(URL)
 
@@ -84,7 +84,7 @@ enum BCutImageSource: Codable {
 
 // MARK: - BCutPhoto
 
-struct BCutPhoto: Identifiable, Codable {
+struct BCutPhoto: Identifiable, Codable, Equatable {
     let id: UUID
     var imageSource: BCutImageSource
     var isBCut: Bool
@@ -93,7 +93,7 @@ struct BCutPhoto: Identifiable, Codable {
 
 // MARK: - CassetteDesign
 
-enum CassetteDesign: String, CaseIterable, Codable {
+enum CassetteDesign: String, CaseIterable, Codable, Equatable {
     case d1 = "cassette_1"
     case d2 = "cassette_2"
     case d3 = "cassette_3"
@@ -153,7 +153,8 @@ class AppState: ObservableObject {
             let taskId = await MusicGPTService.requestGeneration(
                 keywords: keywords,
                 photoCount: photoCount,
-                cassetteID: cassetteID
+                cassetteID: cassetteID,
+                cassetteName: cassette.name
             )
             guard let taskId else {
                 print("[AppState] MusicGPT returned no taskId, aborting")

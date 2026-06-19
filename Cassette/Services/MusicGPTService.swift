@@ -8,7 +8,8 @@ struct MusicGPTService {
     static func requestGeneration(
         keywords: [String],
         photoCount: Int,
-        cassetteID: UUID
+        cassetteID: UUID,
+        cassetteName: String = ""
     ) async -> String? {
         guard !keywords.isEmpty else {
             print("MusicGPT: keywords empty, skipping")
@@ -49,7 +50,8 @@ struct MusicGPTService {
         try? await SupabaseManager.shared.insertCassetteMusic(
             cassetteID: cassetteID,
             taskId: taskId,
-            userID: userID
+            userID: userID,
+            cassetteName: cassetteName
         )
 
         print("MusicGPT task started: \(taskId)")

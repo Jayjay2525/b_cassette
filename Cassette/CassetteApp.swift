@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct CassetteApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @Environment(\.scenePhase) private var scenePhase
 

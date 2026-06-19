@@ -12,6 +12,7 @@
 		3BA128F22FE42ADD00DE699D /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 3BA128F12FE42ADD00DE699D /* Lottie */; };
 		3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F32FE42B3400DE699D /* onboarding_2.json */; };
 		3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F52FE432A000DE699D /* onboarding_1.json */; };
+		3BA128FA2FE56A9700DE699D /* onboarding_3.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F92FE56A9700DE699D /* onboarding_3.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +36,7 @@
 		3BA128E72FE3F8BD00DE699D /* B_Cassette.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = B_Cassette.entitlements; sourceTree = "<group>"; };
 		3BA128F32FE42B3400DE699D /* onboarding_2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_2.json; sourceTree = "<group>"; };
 		3BA128F52FE432A000DE699D /* onboarding_1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_1.json; sourceTree = "<group>"; };
+		3BA128F92FE56A9700DE699D /* onboarding_3.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_3.json; sourceTree = "<group>"; };
 		3BF1086E2FD6F94200E5B575 /* B_Cassette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = B_Cassette.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -104,6 +106,7 @@
 			children = (
 				3BA128F52FE432A000DE699D /* onboarding_1.json */,
 				3BA128F32FE42B3400DE699D /* onboarding_2.json */,
+				3BA128F92FE56A9700DE699D /* onboarding_3.json */,
 				3BA128E72FE3F8BD00DE699D /* B_Cassette.entitlements */,
 				3BF108702FD6F94200E5B575 /* Cassette */,
 				3BF1087E2FD6F94400E5B575 /* CassetteTests */,
@@ -249,6 +252,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BA128FA2FE56A9700DE699D /* onboarding_3.json in Resources */,
 				3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */,
 				3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */,
 			);
@@ -436,7 +440,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = B_Cassette.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = AV42A7BZ8T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -471,7 +475,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = B_Cassette.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = AV42A7BZ8T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

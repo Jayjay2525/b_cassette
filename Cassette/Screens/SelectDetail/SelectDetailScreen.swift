@@ -7,6 +7,9 @@ struct SelectDetailScreen: View {
 
     @State private var showExitAlert: Bool = false
     @State private var navigateToDesign: Bool = false
+    @State private var isLoading: Bool = false
+    @State private var loadingProgress: Double = 0.0
+    @State private var loadingTask: Task<Void, Never>? = nil
     @State private var keywordInput1: String = ""
     @State private var keywordInput2: String = ""
     @State private var keywordInput3: String = ""
@@ -259,18 +262,13 @@ struct SelectDetailScreen: View {
                     cassetteData.name = "cassette \(appState.cassettes.count + 1)"
                 }
                 updateKeywords()
-                navigateToDesign = true
+                startLoading()
             } label: {
                 Text("next")
                     .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(width: 201, height: 48)
                     .background(Capsule().fill(Color.appDarkGray))
-            }
-            .navigationDestination(isPresented: $navigateToDesign) {
-                CassetteLoadingScreen()
-                    .environmentObject(appState)
-                    .environmentObject(cassetteData)
             }
             Spacer().frame(height: 11)
         }
@@ -279,7 +277,16 @@ struct SelectDetailScreen: View {
 
 
         } // 안쪽 ZStack 닫기
+        if isLoading {
+            CassetteLoadingOverlay(progress: loadingProgress)
+        }
+
         } // 바깥 ZStack 닫기
+        .navigationDestination(isPresented: $navigateToDesign) {
+            SelectDesignScreen()
+                .environmentObject(appState)
+                .environmentObject(cassetteData)
+        }
         .ignoresSafeArea(.keyboard)
         .navigationBarHidden(true)
         .onTapGesture { hideKeyboard() }
@@ -289,6 +296,22 @@ struct SelectDetailScreen: View {
             Button("cancel", role: .cancel) { }
         } message: {
             Text("Your cassette won't be saved.")
+        }
+    }
+
+    private func startLoading() {
+        loadingProgress = 0.0
+        isLoading = true
+        loadingTask = Task {
+            for i in 1...40 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run { loadingProgress = Double(i) / 40.0 }
+            }
+            await MainActor.run {
+                isLoading = false
+                navigateToDesign = true
+            }
         }
     }
 

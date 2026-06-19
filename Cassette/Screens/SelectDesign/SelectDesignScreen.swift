@@ -409,7 +409,7 @@ struct ColorEditPanel: View {
     let colorType: CassetteColorType
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: true) {
             VStack(spacing: 24) {
                 // back layer: 항상 활성
                 LayerColorSection(title: "back layer", layerColor: $layer1)

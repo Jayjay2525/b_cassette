@@ -2,15 +2,10 @@ import SwiftUI
 import Combine
 import Lottie
 
-struct CassetteLoadingScreen: View {
-    @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject var cassetteData: NewCassetteData
+struct CassetteLoadingOverlay: View {
+    let progress: Double
 
-    @State private var navigateToDesign = false
-    @State private var progress: Double = 0.0
     @State private var dotCount = 0
-
     private let dotTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -39,32 +34,13 @@ struct CassetteLoadingScreen: View {
                     Capsule()
                         .fill(Color.white)
                         .frame(width: 300 * CGFloat(progress), height: 6)
-                        .animation(.linear(duration: 0.3), value: progress)
+                        .animation(.linear(duration: 0.1), value: progress)
                 }
 
                 Spacer()
                 Spacer().frame(height: 11)
             }
         }
-        .navigationBarHidden(true)
-        .navigationDestination(isPresented: $navigateToDesign) {
-            SelectDesignScreen()
-                .environmentObject(appState)
-                .environmentObject(cassetteData)
-        }
-.onReceive(dotTimer) { _ in
-            dotCount = (dotCount + 1) % 3
-        }
-        .onAppear {
-            Task {
-                for i in 1...40 {
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    await MainActor.run {
-                        progress = Double(i) / 40.0
-                    }
-                }
-                await MainActor.run { navigateToDesign = true }
-            }
-        }
+        .onReceive(dotTimer) { _ in dotCount = (dotCount + 1) % 3 }
     }
 }

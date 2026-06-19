@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Supabase
+import UserNotifications
 
 let supabase = SupabaseClient(
     supabaseURL: URL(string: Config.supabaseURL)!,
@@ -10,20 +11,24 @@ let supabase = SupabaseClient(
 
 class SupabaseManager: ObservableObject {
     static let shared = SupabaseManager()
+    var deviceToken: String? = nil
 
     // MARK: - Cassette Music
 
-    func insertCassetteMusic(cassetteID: UUID, taskId: String, userID: UUID) async throws {
+    func insertCassetteMusic(cassetteID: UUID, taskId: String, userID: UUID, cassetteName: String) async throws {
         print("[Supabase] inserting cassette_music — cassetteID: \(cassetteID), taskId: \(taskId)")
         do {
+            var row: [String: String] = [
+                "cassette_id": cassetteID.uuidString,
+                "task_id": taskId,
+                "user_id": userID.uuidString,
+                "status": "generating",
+                "cassette_name": cassetteName
+            ]
+            if let token = deviceToken { row["device_token"] = token }
             try await supabase
                 .from("cassette_music")
-                .insert([
-                    "cassette_id": cassetteID.uuidString,
-                    "task_id": taskId,
-                    "user_id": userID.uuidString,
-                    "status": "generating"
-                ])
+                .insert(row)
                 .execute()
             print("[Supabase] insertCassetteMusic success")
         } catch {
@@ -106,6 +111,7 @@ class SupabaseManager: ObservableObject {
                             appState.cassettes[idx].trackName = localURL.lastPathComponent
                             appState.cassettes[idx].status = .completed
                             print("[Supabase] cassette completed, trackName: \(localURL.lastPathComponent)")
+                            sendCompletionNotification(cassetteName: appState.cassettes[idx].name)
                         }
                     }
                 } else {
@@ -126,6 +132,19 @@ class SupabaseManager: ObservableObject {
                 print("[Supabase] still generating (status: \(result.status)), will retry in 7s")
             }
         }
+    }
+
+    private func sendCompletionNotification(cassetteName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "\(cassetteName) is completed."
+        content.body = "Come check your new cassette!"
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "cassette-complete-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Special credit

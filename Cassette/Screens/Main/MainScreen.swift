@@ -81,6 +81,10 @@ struct MainScreen: View {
     func onSwipeRightEnded(_ offset: CGFloat) {
         guard circleActive else { swipeRightOffset = 0; return }
         if swipeRightOffset >= swipeRightThreshold {
+            guard mainCassette?.status != .generating else {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { swipeRightOffset = 0 }
+                return
+            }
             // 화면 밖으로 날리고 이동
             withAnimation(.easeIn(duration: 0.2)) {
                 swipeRightOffset = 400
@@ -102,22 +106,28 @@ struct MainScreen: View {
             GeometryReader { geo in
                 ZStack(alignment: .bottom) {
 
-                    // Layer 1: Background
+                    // Layer 1: Background (전체 화면 up/down 스와이프로 카세트 순서 변경)
                     (circleActive ? Color.appGray : Color.appBackground)
                         .ignoresSafeArea()
                         .animation(.easeInOut(duration: 0.25), value: circleActive)
-                        .onTapGesture { onMenuTap() }
+                        .gesture(
+                            DragGesture(minimumDistance: 10)
+                                .onChanged { v in
+                                    guard appState.cassettes.count >= 2,
+                                          abs(v.translation.height) > abs(v.translation.width) else { return }
+                                    dragOffset = v.translation.height
+                                }
+                                .onEnded { v in
+                                    guard abs(v.translation.height) > abs(v.translation.width) else { return }
+                                    commitSwipe()
+                                }
+                        )
 
                     // Layer 2: Circle (탭 + 실시간 드래그)
                     CircleLayer(
                         geo: geo,
                         active: circleActive,
-                        onTap: onCircleTap,
-                        onDragChanged: { offset in
-            guard appState.cassettes.count >= 2 else { return }
-            dragOffset = offset
-        },
-                        onDragEnded: { _ in commitSwipe() }
+                        onTap: onCircleTap
                     )
                     .opacity(1 - swipeRightProgress)
 
@@ -132,10 +142,18 @@ struct MainScreen: View {
                         swipeRightProgress: swipeRightProgress,
                         onTap: { cassette in
                             if circleActive {
+                                guard cassette.status != .generating else { return }
                                 selectedCassette = cassette
                                 navigateToDetail = true
                             } else {
                                 onCircleTap()
+                            }
+                        },
+                        onSetMain: { cassette in
+                            if let idx = appState.cassettes.firstIndex(where: { $0.id == cassette.id }) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    rotationIndex = idx
+                                }
                             }
                         },
                         onSwipeRightChanged: onSwipeRightChanged,
@@ -168,6 +186,12 @@ struct MainScreen: View {
                     .opacity((1 - swipeRightProgress) * (circleActive ? (1 - abs(dragProgress) * 0.7) : 1))
                 }
                 .ignoresSafeArea(edges: .bottom)
+            }
+            .onChange(of: appState.cassettes) {
+                if let current = selectedCassette,
+                   let updated = appState.cassettes.first(where: { $0.id == current.id }) {
+                    selectedCassette = updated
+                }
             }
             .onChange(of: appState.cassettes.count) { oldCount, count in
                 if count == 0 {
@@ -234,8 +258,6 @@ struct CircleLayer: View {
     let geo: GeometryProxy
     let active: Bool
     let onTap: () -> Void
-    let onDragChanged: (CGFloat) -> Void
-    let onDragEnded: (CGFloat) -> Void
 
     var body: some View {
         Circle()
@@ -244,15 +266,6 @@ struct CircleLayer: View {
             .frame(width: 728, height: 728)
             .position(x: -27, y: geo.size.height / 2)
             .animation(.easeInOut(duration: 0.25), value: active)
-            .gesture(
-                DragGesture(minimumDistance: 10)
-                    .onChanged { value in
-                        onDragChanged(value.translation.height)
-                    }
-                    .onEnded { value in
-                        onDragEnded(value.translation.height)
-                    }
-            )
             .onTapGesture { onTap() }
     }
 }
@@ -313,6 +326,7 @@ struct CassetteStackLayer: View {
     let swipeRightOffset: CGFloat
     let swipeRightProgress: CGFloat
     let onTap: (CassetteModel) -> Void
+    let onSetMain: (CassetteModel) -> Void
     let onSwipeRightChanged: (CGFloat) -> Void
     let onSwipeRightEnded: (CGFloat) -> Void
     let onAddTap: () -> Void
@@ -379,8 +393,9 @@ struct CassetteStackLayer: View {
                             }
                             .onEnded { v in onSwipeRightEnded(v.translation.width) }
                         : nil)
-                        .onTapGesture { if isMain { onTap(cassette) } }
-                        .allowsHitTesting(isMain)
+                        .onTapGesture {
+                            if isMain { onTap(cassette) } else { onSetMain(cassette) }
+                        }
 
                     if isMain {
                         Image("arrow_cassette")
@@ -454,8 +469,9 @@ struct CassetteStackLayer: View {
                                     }
                                     .onEnded { v in onSwipeRightEnded(v.translation.width) }
                                 : nil)
-                                .onTapGesture { if isMain { onTap(cassette) } }
-                                .allowsHitTesting(isMain)
+                                .onTapGesture {
+                                    if isMain { onTap(cassette) } else { onSetMain(cassette) }
+                                }
 
                             if isMain {
                                 Image("arrow_cassette")
