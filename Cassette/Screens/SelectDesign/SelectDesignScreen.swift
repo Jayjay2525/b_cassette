@@ -123,7 +123,7 @@ struct SelectDesignScreen: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: "#363636")))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appDarkGray))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     .transition(.opacity)
                     .zIndex(999)
@@ -147,7 +147,7 @@ struct SelectDesignScreen: View {
                         }
                     }
                     .frame(width: 201, height: 48)
-                    .background(Capsule().fill(Color(hex: "#555555")))
+                    .background(Capsule().fill(Color.appDarkGray))
                 }
                 Spacer().frame(height: 11)
             }

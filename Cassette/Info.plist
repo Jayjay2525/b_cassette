@@ -10,6 +10,8 @@
 	<string>sb_publishable_1M_R__6hTa29wL1qlTvaGg_QN_IytJW</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Cassette accesses your photos to select b-cuts.</string>
+	<key>MUSICGPT_API_KEY</key>
+	<string>K-ESLPZNxHMZRY9SUYklYGkGmsoW9JSKtBpDfMa7kn8</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>CutiveMono-Regular.ttf</string>

@@ -1,109 +1,115 @@
 import SwiftUI
 
-struct SelectTypeScreen: View {
+struct SelectTypePopup: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var cassetteData: NewCassetteData
-    @Environment(\.dismiss) var dismiss
 
-    @State private var showExitAlert = false
-    @State private var navigateToLoading = false
+    let onDismiss: () -> Void
+    let onSelect: (Bool) -> Void
+
     @State private var isSigningIn = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.appBackground.ignoresSafeArea()
+        ZStack {
+            Image("pop_up_box")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 313)
 
-            VStack(spacing: 0) {
-                // Navbar
+            VStack(spacing: 16) {
+                // ── 상단 헤더 ──
                 HStack {
-                    Button { dismiss() } label: {
-                        Image("button_chevronLeft")
-                            .resizable().scaledToFit()
-                            .frame(width: 24, height: 24)
-                    }
+                    Color.clear.frame(width: 24, height: 24)
                     Spacer()
-                    Text("make a cassette")
+                    Text("select types")
                         .font(.appTitle)
                         .foregroundColor(.appBlack)
                     Spacer()
-                    Button { showExitAlert = true } label: {
+                    Button { onDismiss() } label: {
                         Image("button_x")
                             .resizable().scaledToFit()
                             .frame(width: 24, height: 24)
                     }
                 }
+                .padding(.top, 16)
                 .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 48)
 
-                Spacer()
-
-                // 버튼 두 개
-                VStack(spacing: 16) {
-                    // normal
-                    Button {
-                        cassetteData.isSpecial = false
-                        navigateToLoading = true
-                    } label: {
-                        VStack(spacing: 6) {
-                            Text("normal cassette")
-                                .font(.appBody)
-                                .foregroundColor(.appBlack)
-                            Text("random music from our library")
-                                .font(.appMicro)
-                                .foregroundColor(.appDarkGray)
-                        }
-                        .frame(width: 289, height: 72)
-                        .background(Color.appWhite)
+                // ── 버튼 1: normal cassette ──
+                Button { onSelect(false) } label: {
+                    VStack(spacing: 8) {
+                        Text("normal cassette")
+                            .font(.appBody)
+                            .foregroundColor(.appBlack)
+                        Image("line_scrib_b")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 180)
+                        Text("random music from\nour library tracks")
+                            .font(.appMicro)
+                            .foregroundColor(.appDarkGray)
+                            .multilineTextAlignment(.center)
+                        Text("free")
+                            .font(.appBody)
+                            .foregroundColor(.appDarkGray)
                     }
-
-                    // special
-                    Button {
-                        handleSpecial()
-                    } label: {
-                        VStack(spacing: 6) {
-                            Text("special cassette")
-                                .font(.appBody)
-                                .foregroundColor(.appWhite)
-                            Text("ai-generated music for your film")
-                                .font(.appMicro)
-                                .foregroundColor(Color.appWhite.opacity(0.7))
-                        }
-                        .frame(width: 289, height: 72)
-                        .background(Color.appBlack)
-                    }
+                    .padding(.vertical, 10)
+                    .frame(width: 233, height: 124)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appWhite))
                 }
 
-                Spacer()
-            }
+                // ── 버튼 2: special cassette ──
+                VStack(spacing: 6) {
+                    Button { handleSpecial() } label: {
+                        ZStack {
+                            VStack(spacing: 8) {
+                                Text("special cassette")
+                                    .font(.appBody)
+                                    .foregroundColor(.appWhite)
+                                Image("line_scrib_w")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 180)
+                                Text("fitting music from\nai generation")
+                                    .font(.appMicro)
+                                    .foregroundColor(.appWhite.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                Text("free (3/3)")
+                                    .font(.appBody)
+                                    .foregroundColor(.appWhite.opacity(0.7))
+                            }
+                            .padding(.vertical, 10)
 
-            .navigationDestination(isPresented: $navigateToLoading) {
-                CassetteLoadingScreen()
-                    .environmentObject(appState)
-                    .environmentObject(cassetteData)
+                            if isSigningIn {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .appWhite))
+                            }
+                        }
+                        .frame(width: 233, height: 124)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appBlack))
+                    }
+                    .disabled(isSigningIn)
+
+                    Text("sign-in required")
+                        .font(.appMicro)
+                        .foregroundColor(.appDarkGray)
+                }
+
+                Spacer().frame(height: 8)
             }
-        }
-        .navigationBarHidden(true)
-        .alert("Leave without saving?", isPresented: $showExitAlert) {
-            Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
-            Button("cancel", role: .cancel) { }
-        } message: {
-            Text("Your cassette won't be saved.")
+            .frame(width: 313)
         }
     }
 
     private func handleSpecial() {
         if AuthManager.shared.isSignedIn {
-            cassetteData.isSpecial = true
-            navigateToLoading = true
+            onSelect(true)
         } else {
             isSigningIn = true
             Task {
                 do {
                     try await AuthManager.shared.signInWithApple()
                     isSigningIn = false
-                    cassetteData.isSpecial = true
-                    navigateToLoading = true
+                    onSelect(true)
                 } catch {
                     isSigningIn = false
                     print("SignIn error: \(error)")

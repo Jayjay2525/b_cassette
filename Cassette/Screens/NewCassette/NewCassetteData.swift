@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Photos
 
 class NewCassetteData: ObservableObject {
     @Published var selectedPhotos: [BCutPhoto] = []
@@ -24,6 +25,27 @@ class NewCassetteData: ObservableObject {
     static func randomTrackName() -> String {
         let track = trackList.randomElement()!
         return "\(track.name).\(track.ext)"
+    }
+
+    func resetForReselection() {
+        for photo in selectedPhotos {
+            if case .file(let url) = photo.imageSource {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        let result = PHAsset.fetchAssets(withLocalIdentifiers: assetIDsToDelete, options: nil)
+        var restored: [BCutPhoto] = []
+        result.enumerateObjects { asset, _, _ in
+            restored.append(BCutPhoto(
+                id: UUID(),
+                imageSource: .asset(asset.localIdentifier),
+                isBCut: true,
+                takenAt: asset.creationDate ?? Date()
+            ))
+        }
+        selectedPhotos = restored
+        assetIDsToDelete = []
+        suggestedKeywords = []
     }
 
     func buildCassette() -> CassetteModel {

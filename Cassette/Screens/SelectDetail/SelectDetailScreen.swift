@@ -7,6 +7,7 @@ struct SelectDetailScreen: View {
 
     @State private var showExitAlert: Bool = false
     @State private var navigateToDesign: Bool = false
+    @State private var showTypePopup: Bool = false
     @State private var keywordInput1: String = ""
     @State private var keywordInput2: String = ""
     @State private var keywordInput3: String = ""
@@ -35,13 +36,17 @@ struct SelectDetailScreen: View {
     }
 
     var body: some View {
+        ZStack {
         ZStack(alignment: .bottom) {
         ScrollView(showsIndicators: false) {
         VStack(spacing: 0) {
 
             // ── 1. Navbar ──
             HStack {
-                Button { dismiss() } label: {
+                Button {
+                    cassetteData.resetForReselection()
+                    dismiss()
+                } label: {
                     Image("button_chevronLeft")
                         .resizable().scaledToFit()
                         .frame(width: 24, height: 24)
@@ -105,7 +110,7 @@ struct SelectDetailScreen: View {
 
             // ── 5. 구분선 ──
             Rectangle()
-                .fill(Color(hex: "#B4B4B4"))
+                .fill(Color.appGray)
                 .frame(height: 1)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -200,7 +205,7 @@ struct SelectDetailScreen: View {
 
             // ── 7. 구분선 ──
             Rectangle()
-                .fill(Color(hex: "#B4B4B4"))
+                .fill(Color.appGray)
                 .frame(height: 1)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -255,16 +260,16 @@ struct SelectDetailScreen: View {
                     cassetteData.name = "cassette \(appState.cassettes.count + 1)"
                 }
                 updateKeywords()
-                navigateToDesign = true
+                withAnimation(.easeOut(duration: 0.25)) { showTypePopup = true }
             } label: {
                 Text("next")
                     .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(width: 201, height: 48)
-                    .background(Capsule().fill(Color(hex: "#555555")))
+                    .background(Capsule().fill(Color.appDarkGray))
             }
             .navigationDestination(isPresented: $navigateToDesign) {
-                SelectTypeScreen()
+                CassetteLoadingScreen()
                     .environmentObject(appState)
                     .environmentObject(cassetteData)
             }
@@ -272,7 +277,35 @@ struct SelectDetailScreen: View {
         }
         .frame(maxWidth: .infinity)
         .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
-        } // ZStack 닫기
+
+        // ── Type 선택 오버레이 ──
+        if showTypePopup {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeIn(duration: 0.2)) { showTypePopup = false }
+                }
+                .transition(.opacity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            SelectTypePopup(
+                onDismiss: {
+                    withAnimation(.easeIn(duration: 0.2)) { showTypePopup = false }
+                },
+                onSelect: { isSpecial in
+                    cassetteData.isSpecial = isSpecial
+                    showTypePopup = false
+                    navigateToDesign = true
+                }
+            )
+            .environmentObject(appState)
+            .environmentObject(cassetteData)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        }
+
+        } // 안쪽 ZStack 닫기
+        } // 바깥 ZStack 닫기
         .ignoresSafeArea(.keyboard)
         .navigationBarHidden(true)
         .onTapGesture { hideKeyboard() }

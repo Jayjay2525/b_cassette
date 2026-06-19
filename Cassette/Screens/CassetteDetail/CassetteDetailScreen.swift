@@ -176,7 +176,7 @@ struct CassetteDetailScreen: View {
 
             // 키워드 오버레이
             if showKeywords && !cassette.keywords.isEmpty {
-                Color(hex: "#D9D9D9").opacity(0.8)
+                Color.appBackground.opacity(0.8)
                     .frame(width: 320)
                     .overlay(
                         FlowLayout(spacing: 10, keywords: cassette.keywords)
@@ -210,9 +210,9 @@ struct CassetteDetailScreen: View {
         VStack(spacing: 0) {
             // Progress bar
             ZStack(alignment: .leading) {
-                // Layer 1: 배경 이미지
-                Image("music_indicator_background")
-                    .resizable()
+                // Layer 1: 배경
+                Capsule()
+                    .fill(Color.appGray)
                     .frame(width: indicatorWidth, height: indicatorHeight)
 
                 // Layer 2: 진행 표시 (흰색 RoundedRectangle)
@@ -419,7 +419,7 @@ struct FlowLayout: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)
-                                .background(Capsule().fill(Color(hex: "#3D1A1A")))
+                                .background(Capsule().fill(Color.appLightAccent))
                         }
                     }
                 }

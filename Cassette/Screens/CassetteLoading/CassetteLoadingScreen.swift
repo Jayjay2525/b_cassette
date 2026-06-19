@@ -36,7 +36,7 @@ struct CassetteLoadingScreen: View {
 
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color(hex: "#D0D0D0"))
+                        .fill(Color.appGray)
                         .frame(width: 300, height: 6)
                     Capsule()
                         .fill(Color.white)
@@ -48,10 +48,11 @@ struct CassetteLoadingScreen: View {
 
                 if showSkip {
                     VStack(spacing: 16) {
-                        Text("taking longer than expected.\npick a design first?")
+                        Text("taking longer than expected..\nhow about picking a design first?")
                             .font(.appMicro)
                             .foregroundColor(.appDarkGray)
                             .multilineTextAlignment(.center)
+                            .padding(.bottom, 16)
 
                         Button {
                             pollingTask?.cancel()
@@ -61,7 +62,7 @@ struct CassetteLoadingScreen: View {
                                 .font(.appBody)
                                 .foregroundColor(.appWhite)
                                 .frame(width: 201, height: 48)
-                                .background(Capsule().fill(Color(hex: "#555555")))
+                                .background(Capsule().fill(Color.appDarkGray))
                         }
                     }
                     .transition(.opacity)

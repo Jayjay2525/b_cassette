@@ -358,20 +358,9 @@ struct CassetteStackLayer: View {
                     let wrapOpacity = isWrapAround ? Double(max(0, 1 - t * 2)) : 1.0
                     let isMain = slotIndex == 0
 
-                    let isGenerating = cassette.status == .generating
-                    ZStack {
-                        Image(cassette.design.imageName)
-                            .resizable().scaledToFill()
-                            .frame(width: 345, height: 222)
-                        if isGenerating {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.black.opacity(0.45))
-                                .frame(width: 345, height: 222)
-                            Text("generating...")
-                                .font(.appMicro)
-                                .foregroundColor(.white)
-                        }
-                    }
+                    Image(cassette.design.imageName)
+                        .resizable().scaledToFill()
+                        .frame(width: 345, height: 222)
                         .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                         .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                         .rotationEffect(.degrees(slot.rotation))
@@ -379,9 +368,9 @@ struct CassetteStackLayer: View {
                             x: slot.x + (isMain ? swipeRightOffset : 0),
                             y: geo.size.height / 2 + slot.yFromMid
                         )
-                        .opacity((isMain ? Double(cassette.printProgress) : Double(cassette.printProgress) * Double(1 - swipeRightProgress)) * wrapOpacity)
+                        .opacity((isMain ? (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) : (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) * Double(1 - swipeRightProgress)) * wrapOpacity)
                         .zIndex(slot.zIndex)
-                        .gesture(isMain && !isGenerating ? DragGesture(minimumDistance: 10)
+                        .gesture(isMain ? DragGesture(minimumDistance: 10)
                             .onChanged { v in
                                 if abs(v.translation.width) > abs(v.translation.height) {
                                     onSwipeRightChanged(v.translation.width)
@@ -389,7 +378,7 @@ struct CassetteStackLayer: View {
                             }
                             .onEnded { v in onSwipeRightEnded(v.translation.width) }
                         : nil)
-                        .onTapGesture { if isMain && !isGenerating { onTap(cassette) } }
+                        .onTapGesture { if isMain { onTap(cassette) } }
                         .allowsHitTesting(isMain)
 
                     if isMain {
@@ -435,7 +424,7 @@ struct CassetteStackLayer: View {
                                 .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                                 .rotationEffect(.degrees(interpolated.rotation))
                                 .position(x: interpolated.x, y: geo.size.height / 2 + interpolated.yFromMid)
-                                .opacity(Double(t) * Double(cassette.printProgress))
+                                .opacity(Double(t) * (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)))
                                 .zIndex(interpolated.zIndex)
                         } else {
                             let currentSlot = cassetteSlots[csi]
@@ -445,20 +434,9 @@ struct CassetteStackLayer: View {
                             let slot = lerpSlot(currentSlot, targetSlot, t: t)
                             let isMain = csi == 0
 
-                            let isGenerating = cassette.status == .generating
-                            ZStack {
-                                Image(cassette.design.imageName)
-                                    .resizable().scaledToFill()
-                                    .frame(width: 345, height: 222)
-                                if isGenerating {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.black.opacity(0.45))
-                                        .frame(width: 345, height: 222)
-                                    Text("generating...")
-                                        .font(.appMicro)
-                                        .foregroundColor(.white)
-                                }
-                            }
+                            Image(cassette.design.imageName)
+                                .resizable().scaledToFill()
+                                .frame(width: 345, height: 222)
                                 .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                                 .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                                 .rotationEffect(.degrees(slot.rotation))
@@ -466,9 +444,9 @@ struct CassetteStackLayer: View {
                                     x: slot.x + (isMain ? swipeRightOffset : 0),
                                     y: geo.size.height / 2 + slot.yFromMid
                                 )
-                                .opacity(isMain ? Double(cassette.printProgress) : Double(cassette.printProgress) * Double(1 - swipeRightProgress))
+                                .opacity(isMain ? (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) : (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) * Double(1 - swipeRightProgress))
                                 .zIndex(slot.zIndex)
-                                .gesture(isMain && !isGenerating ? DragGesture(minimumDistance: 10)
+                                .gesture(isMain ? DragGesture(minimumDistance: 10)
                                     .onChanged { v in
                                         if abs(v.translation.width) > abs(v.translation.height) {
                                             onSwipeRightChanged(v.translation.width)
@@ -476,7 +454,7 @@ struct CassetteStackLayer: View {
                                     }
                                     .onEnded { v in onSwipeRightEnded(v.translation.width) }
                                 : nil)
-                                .onTapGesture { if isMain && !isGenerating { onTap(cassette) } }
+                                .onTapGesture { if isMain { onTap(cassette) } }
                                 .allowsHitTesting(isMain)
 
                             if isMain {
@@ -733,11 +711,20 @@ struct BottomInfoPanel: View {
                         .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
-                    Text(c.isExpired ? "expired" : "\(c.daysLeft) days left")
-                        .font(.custom("SF Mono", size: 13).monospaced())
-                        .kerning(13 * 0.08)
-                        .frame(height: 23)
-                        .foregroundColor(c.isExpired ? .appGray : .appAccent)
+                    Group {
+                        switch c.status {
+                        case .generating:
+                            Text("generating...")
+                        case .failed:
+                            Text("generation failed")
+                        case .completed:
+                            Text(c.isExpired ? "expired" : "\(c.daysLeft) days left")
+                        }
+                    }
+                    .font(.custom("SF Mono", size: 13).monospaced())
+                    .kerning(13 * 0.08)
+                    .frame(height: 23)
+                    .foregroundColor(c.status == .completed ? (c.isExpired ? .appGray : .appAccent) : .appAccent)
                 }
             }
 
@@ -746,8 +733,11 @@ struct BottomInfoPanel: View {
         .padding(.top, 12)
         .padding(.horizontal, 16)
         .frame(width: 345, height: 140, alignment: .topLeading)
-        .background(Color.appWhite)
-        .overlay(Rectangle().stroke(Color.appBlack, lineWidth: 1))
+        .background(
+            Image("white_box")
+                .resizable()
+                .frame(width: 345, height: 140)
+        )
         .padding(.bottom, 40)
         .opacity(visible ? 1 : 0)
         .animation(.easeInOut(duration: 0.25), value: visible)

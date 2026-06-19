@@ -32,7 +32,7 @@ struct FilmProcessingView: View {
             // 프로그레스 바
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color(hex: "#D0D0D0"))
+                    .fill(Color.appGray)
                     .frame(width: 300, height: 6)
 
                 Capsule()
