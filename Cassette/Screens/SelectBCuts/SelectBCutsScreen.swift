@@ -89,7 +89,6 @@ struct SelectBCutsScreen: View {
                                     }
                             }
                         }
-                        .padding(.horizontal, 24)
                         .padding(.bottom, 100)
 
                         if !allLoaded {
@@ -97,6 +96,7 @@ struct SelectBCutsScreen: View {
                                 .padding(.bottom, 120)
                         }
                     }
+                    .padding(.horizontal, 24)
                 }
             } else {
                 // ── 캐러셀 모드 ──

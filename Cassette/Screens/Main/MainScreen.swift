@@ -50,9 +50,18 @@ struct MainScreen: View {
 
     func onMenuTap() {
         withAnimation(.easeInOut(duration: 0.25)) {
-            circleActive = false
-            panelMode = .overall
-            panelVisible = true
+            if panelMode == .overall {
+                // overall → 카세트 선택 상태로 복귀
+                if selectedCassette != nil || mainCassette != nil {
+                    panelMode = .cassette
+                    circleActive = true
+                }
+            } else {
+                // cassette → overall
+                circleActive = false
+                panelMode = .overall
+                panelVisible = true
+            }
         }
     }
 
@@ -70,7 +79,11 @@ struct MainScreen: View {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             dragOffset = 0
         }
-        if circleActive { selectedCassette = mainCassette }
+        selectedCassette = mainCassette
+        withAnimation(.easeInOut(duration: 0.25)) {
+            circleActive = true
+            panelMode = .cassette
+        }
     }
 
     func onSwipeRightChanged(_ offset: CGFloat) {
@@ -130,6 +143,18 @@ struct MainScreen: View {
                         onTap: onCircleTap
                     )
                     .opacity(1 - swipeRightProgress)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 10)
+                            .onChanged { v in
+                                guard appState.cassettes.count >= 2,
+                                      abs(v.translation.height) > abs(v.translation.width) else { return }
+                                dragOffset = v.translation.height
+                            }
+                            .onEnded { v in
+                                guard abs(v.translation.height) > abs(v.translation.width) else { return }
+                                commitSwipe()
+                            }
+                    )
 
                     // Layer 3: Cassettes
                     CassetteStackLayer(
@@ -153,6 +178,11 @@ struct MainScreen: View {
                             if let idx = appState.cassettes.firstIndex(where: { $0.id == cassette.id }) {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                     rotationIndex = idx
+                                }
+                                selectedCassette = cassette
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    circleActive = true
+                                    panelMode = .cassette
                                 }
                             }
                         },
