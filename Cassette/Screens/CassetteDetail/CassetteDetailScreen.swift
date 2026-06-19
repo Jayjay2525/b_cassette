@@ -6,7 +6,11 @@ import AVFoundation
 struct CassetteDetailScreen: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
-    let cassette: CassetteModel
+    @State var cassette: CassetteModel
+
+    init(cassette: CassetteModel) {
+        _cassette = State(initialValue: cassette)
+    }
 
     // MARK: - State
     @State private var isPlaying: Bool = false
@@ -100,6 +104,11 @@ struct CassetteDetailScreen: View {
             }
         }
         .navigationBarHidden(true)
+        .onChange(of: appState.cassettes) {
+            if let updated = appState.cassettes.first(where: { $0.id == cassette.id }) {
+                cassette = updated
+            }
+        }
         .onReceive(timer) { _ in
             guard isPlaying, !isScrubbing, let player else { return }
             if player.isPlaying {
@@ -139,7 +148,7 @@ struct CassetteDetailScreen: View {
 
     // MARK: - Subviews
 
-    private var navBar: some View {
+    @ViewBuilder private var navBar: some View {
         HStack(spacing: 24) {
             Button { dismiss() } label: {
                 Image("button_chevronLeft")
