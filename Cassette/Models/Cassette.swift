@@ -20,6 +20,7 @@ struct CassetteModel: Identifiable {
     var photos: [BCutPhoto]
     var keywords: [String]
     var design: CassetteDesign
+    var customImagePath: String? = nil  // 렌더링된 커스텀 카세트 PNG 경로
     var printProgress: Double  // 0.0 → 1.0 (현상 애니메이션)
     var trackName: String      // 로컬 사운드 파일 이름 (확장자 포함)
     var status: CassetteStatus = .completed

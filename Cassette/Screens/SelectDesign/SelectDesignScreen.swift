@@ -1,6 +1,14 @@
 import SwiftUI
 import Photos
 
+// MARK: - DesignTab
+
+enum DesignTab {
+    case color, text, sticker
+}
+
+// MARK: - SelectDesignScreen
+
 struct SelectDesignScreen: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var cassetteData: NewCassetteData
@@ -8,14 +16,10 @@ struct SelectDesignScreen: View {
 
     @State private var showExitAlert = false
     @State private var isSaving = false
-    @State private var currentIndex: Int = 0
-    @State private var dragY: CGFloat = 0
     @State private var showToast = false
+    @State private var selectedTab: DesignTab = .color
 
-    private let designs = CassetteDesign.allCases
-    private let itemSpacing: CGFloat = 150   // 아이템 간 수직 간격
-    private let dragDamping:  CGFloat = 0.45 // 드래그 감도 (낮을수록 둔감)
-    private let mainWidth:    CGFloat = 345
+    private let canvasWidth: CGFloat = 345
 
     private let fmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "yyyy.MM.dd"; return f
@@ -54,68 +58,82 @@ struct SelectDesignScreen: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
 
-                // ── 카세트 정보 (이름 / 날짜 / 사진 수) ──
-                VStack(spacing: 12) {
-                    // 이름
+                // ── 카세트 이름 ──
+                VStack(spacing: 6) {
                     Text(cassetteData.name.isEmpty ? "untitled" : cassetteData.name)
                         .font(.appTitle)
                         .foregroundColor(.appBlack)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
                         .frame(width: 257, height: 26)
                         .padding(.vertical, 5)
                         .padding(.horizontal, 16)
                         .background(Color.appWhite)
                         .frame(width: 289, height: 36)
-
-                    // 날짜
                     Text(dateRangeString)
-                        .font(.appBody)
-                        .foregroundColor(.appDarkGray)
-
-                    // 사진 수
-                    Text("\(cassetteData.selectedPhotos.count) photos")
                         .font(.appBody)
                         .foregroundColor(.appDarkGray)
                 }
                 .padding(.bottom, 16)
 
-                // ── 캐러셀 ──
-                GeometryReader { geo in
-                    ZStack {
-                        ForEach(0..<designs.count, id: \.self) { idx in
-                            carouselItem(idx: idx, in: geo)
+                // ── 카세트 프리뷰 ──
+                CassetteCanvasView(
+                    layer1: cassetteData.layer1Color,
+                    layer2: cassetteData.layer2Color,
+                    layer3: cassetteData.layer3Color,
+                    width: canvasWidth
+                )
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
+
+                // ── 하단 편집 패널 ──
+                VStack(spacing: 0) {
+
+                    // 탭 버튼
+                    GeometryReader { geo in
+                        HStack(spacing: 0) {
+                            tabButton(.color,   icon: "button_palette", width: geo.size.width / 3)
+                            tabButton(.text,    icon: "button_text",    width: geo.size.width / 3)
+                            tabButton(.sticker, icon: "button_sticker", width: geo.size.width / 3)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .gesture(
-                        DragGesture(minimumDistance: 10)
-                            .onChanged { v in
-                                dragY = v.translation.height
-                            }
-                            .onEnded { v in
-                                let velocity = v.predictedEndTranslation.height
-                                let combined = (dragY + velocity * 0.3) * dragDamping
+                    .padding(.horizontal, 24)
+                    .frame(height: 60)
 
-                                // 몇 칸 이동할지 결정
-                                let steps = -Int((combined / itemSpacing).rounded())
-                                let newIndex = max(0, min(designs.count - 1, currentIndex + steps))
-
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.78)) {
-                                    currentIndex = newIndex
-                                    dragY = 0
-                                }
-                            }
-                    )
+                    // 탭 콘텐츠
+                    Group {
+                        switch selectedTab {
+                        case .color:
+                            ColorEditPanel(
+                                layer1: $cassetteData.layer1Color,
+                                layer2: $cassetteData.layer2Color,
+                                layer3: $cassetteData.layer3Color
+                            )
+                        case .text:
+                            TextEditPanel()
+                        case .sticker:
+                            StickerEditPanel()
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-
-                Color.clear.frame(height: 100)
+                .background(
+                    Color.appLightGray
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 12,
+                                bottomLeadingRadius: 0,
+                                bottomTrailingRadius: 0,
+                                topTrailingRadius: 12
+                            )
+                        )
+                        .shadow(color: Color.black.opacity(0.12), radius: 20, x: 0, y: 0)
+                        .ignoresSafeArea(edges: .bottom)
+                )
+                .frame(height: UIScreen.main.bounds.height * 0.45)
             }
 
-            // ── Toast ──
+            // ── 토스트 ──
             if showToast {
                 Text("photos must be deleted\nto create a cassette")
                     .font(.appMicro)
@@ -129,12 +147,12 @@ struct SelectDesignScreen: View {
                     .zIndex(999)
             }
 
-            // ── Done 버튼 고정 ──
+            // ── Done 버튼 ──
             VStack(spacing: 0) {
                 Button {
                     guard !isSaving else { return }
-                    cassetteData.design = designs[currentIndex]
-                    deleteAndFinish()
+                    isSaving = true
+                    Task { await renderAndFinish() }
                 } label: {
                     Group {
                         if isSaving {
@@ -154,11 +172,6 @@ struct SelectDesignScreen: View {
             .frame(maxWidth: .infinity)
         }
         .navigationBarHidden(true)
-        .onAppear {
-            if let idx = designs.firstIndex(of: cassetteData.design) {
-                currentIndex = idx
-            }
-        }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
@@ -167,8 +180,53 @@ struct SelectDesignScreen: View {
         }
     }
 
-    private func deleteAndFinish() {
-        isSaving = true
+    // MARK: - 탭 버튼
+
+    @ViewBuilder
+    private func tabButton(_ tab: DesignTab, icon: String, width: CGFloat) -> some View {
+        Button { selectedTab = tab } label: {
+            ZStack {
+                if selectedTab == tab {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.appBackground)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                }
+                Image(icon)
+                    .resizable().scaledToFit()
+                    .frame(width: 40, height: 40)
+            }
+            .frame(width: width, height: 60)
+        }
+    }
+
+    // MARK: - 렌더링 + 저장
+
+    @MainActor
+    private func renderAndFinish() async {
+        // 1. 카세트 렌더링
+        let renderWidth: CGFloat = 1035
+        let renderView = CassetteCanvasView(
+            layer1: cassetteData.layer1Color,
+            layer2: cassetteData.layer2Color,
+            layer3: cassetteData.layer3Color,
+            width: renderWidth
+        )
+
+        let renderer = ImageRenderer(content: renderView)
+        renderer.scale = 1.0
+
+        if let uiImage = renderer.uiImage,
+           let pngData = uiImage.pngData() {
+            let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("cassettes/\(cassetteData.cassetteID.uuidString)")
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let path = dir.appendingPathComponent("design.png").path
+            try? pngData.write(to: URL(fileURLWithPath: path))
+            cassetteData.customImagePath = path
+        }
+
+        // 2. 사진 삭제 + 카세트 저장
         let ids = cassetteData.assetIDsToDelete
         let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
         var assets: [PHAsset] = []
@@ -189,60 +247,171 @@ struct SelectDesignScreen: View {
             cassetteData.shouldDismiss = true
         }
     }
+}
 
-    // MARK: - 로컬 저장 (레거시 — 미사용)
+// MARK: - CassetteCanvasView
 
-    private func savePhotosLocally(completion: @escaping () -> Void) {
-        let photos = cassetteData.selectedPhotos
-        let cassetteID = cassetteData.cassetteID
-        var savedPhotos: [BCutPhoto] = Array(repeating: photos[0], count: photos.count)
-        let group = DispatchGroup()
+struct CassetteCanvasView: View {
+    let layer1: LayerColor
+    let layer2: LayerColor
+    let layer3: LayerColor
+    let width: CGFloat
 
-        for (i, photo) in photos.enumerated() {
-            guard case .asset(let id) = photo.imageSource else {
-                savedPhotos[i] = photo
-                continue
-            }
-            let result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
-            guard let asset = result.firstObject else {
-                savedPhotos[i] = photo
-                continue
-            }
-            group.enter()
-            appState.saveBCut(asset: asset, cassetteID: cassetteID, isBCut: photo.isBCut) { saved in
-                savedPhotos[i] = saved ?? photo
-                group.leave()
-            }
+    var body: some View {
+        ZStack {
+            colorizedLayer(imageName: "cassette_layer1", layer: layer1)
+            colorizedLayer(imageName: "cassette_layer2", layer: layer2)
+            colorizedLayer(imageName: "cassette_layer3", layer: layer3)
         }
-
-        group.notify(queue: .main) {
-            cassetteData.selectedPhotos = savedPhotos
-            completion()
-        }
-    }
-
-    // MARK: - 각 아이템 뷰
-
-    @ViewBuilder
-    private func carouselItem(idx: Int, in geo: GeometryProxy) -> some View {
-        let relPos   = CGFloat(idx - currentIndex) - (dragY * dragDamping) / itemSpacing
-        let distance = abs(relPos)
-
-        if distance > 2.5 {
-            Color.clear.frame(width: 0, height: 0)
-        } else {
-            let scale   = max(0.5, 1.0 - distance * 0.18)
-            let opacity = max(0.0, 1.0 - distance * 0.60)
-            let yOffset = relPos * itemSpacing
-
-            Image(designs[idx].imageName)
+        .frame(width: width)
+        .mask(
+            Image("cassette_mask")
                 .resizable()
                 .scaledToFit()
-                .frame(width: mainWidth)
-                .scaleEffect(scale)
-                .opacity(opacity)
-                .offset(y: yOffset)
-                .zIndex(-distance)
+                .frame(width: width)
+        )
+    }
+
+    @ViewBuilder
+    private func colorizedLayer(imageName: String, layer: LayerColor) -> some View {
+        Image(imageName)
+            .resizable()
+            .scaledToFit()
+            .colorMultiply(Color(hue: layer.hue, saturation: layer.saturation, brightness: 1.0))
+            .saturation(1.0 + layer.saturation * 4.0)
+            .brightness(layer.brightness * 0.2)
+    }
+}
+
+// MARK: - Color 탭
+
+struct ColorEditPanel: View {
+    @Binding var layer1: LayerColor
+    @Binding var layer2: LayerColor
+    @Binding var layer3: LayerColor
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                LayerColorSection(title: "back layer", layerColor: $layer1)
+                LayerColorSection(title: "inner layer", layerColor: $layer2)
+                LayerColorSection(title: "center layer", layerColor: $layer3)
+                Spacer().frame(height: 60)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+        }
+    }
+}
+
+struct LayerColorSection: View {
+    let title: String
+    @Binding var layerColor: LayerColor
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.appBody)
+                .foregroundColor(.appBlack)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            // Hue
+            HSBSlider(
+                value: $layerColor.hue,
+                track: LinearGradient(
+                    colors: stride(from: 0.0, through: 1.0, by: 0.05).map {
+                        Color(hue: $0, saturation: 1, brightness: 1)
+                    },
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+
+            // Saturation
+            HSBSlider(
+                value: $layerColor.saturation,
+                track: LinearGradient(
+                    colors: [
+                        Color(hue: layerColor.hue, saturation: 0, brightness: 1),
+                        Color(hue: layerColor.hue, saturation: 1, brightness: 1)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+
+            // Brightness
+            HSBSlider(
+                value: $layerColor.brightness,
+                track: LinearGradient(
+                    colors: [.black, .white],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+        }
+    }
+}
+
+struct HSBSlider: View {
+    @Binding var value: Double
+    let track: LinearGradient
+
+    var body: some View {
+        GeometryReader { geo in
+            let thumbSize: CGFloat = 20
+            let trackWidth = geo.size.width - thumbSize
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(track)
+                    .frame(height: 6)
+                    .padding(.horizontal, thumbSize / 2)
+
+                Circle()
+                    .fill(Color.appWhite)
+                    .frame(width: thumbSize, height: thumbSize)
+                    .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
+                    .offset(x: CGFloat(value) * trackWidth)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { drag in
+                                let raw = drag.location.x / trackWidth
+                                value = max(0, min(1, raw))
+                            }
+                    )
+            }
+        }
+        .frame(height: 20)
+    }
+}
+
+// MARK: - Text 탭
+
+struct TextEditPanel: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("coming soon")
+                .font(.appMicro)
+                .foregroundColor(.appGray)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 24)
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Sticker 탭
+
+struct StickerEditPanel: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("coming soon")
+                .font(.appMicro)
+                .foregroundColor(.appGray)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 24)
+            Spacer()
         }
     }
 }

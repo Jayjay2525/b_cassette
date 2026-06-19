@@ -2,6 +2,17 @@ import SwiftUI
 import Combine
 import Photos
 
+struct LayerColor {
+    var hue: Double = 0.0
+    var saturation: Double = 0.0  // 0 = 무채색(원본), 1 = 완전 채색
+    var brightness: Double = 0.0  // 0 = 원본 밝기, 1 = 완전 밝음(흰색)
+
+    // colorMultiply에 쓸 색조 — saturation=0이면 white(원본 보존)
+    var tintColor: Color {
+        Color(hue: hue, saturation: saturation, brightness: 1.0)
+    }
+}
+
 class NewCassetteData: ObservableObject {
     @Published var selectedPhotos: [BCutPhoto] = []
     @Published var name: String = ""
@@ -12,6 +23,10 @@ class NewCassetteData: ObservableObject {
     var musicTaskId: String? = nil
     var musicCompleted: Bool = false
     @Published var design: CassetteDesign = .d1
+    @Published var layer1Color: LayerColor = LayerColor()
+    @Published var layer2Color: LayerColor = LayerColor()
+    @Published var layer3Color: LayerColor = LayerColor()
+    var customImagePath: String? = nil
     @Published var shouldDismiss: Bool = false
     var expiresAt: Date = Date().addingTimeInterval(86400 * 30)  // 30일 후
     let cassetteID: UUID = UUID()  // 로컬 파일 저장 경로용 고정 ID
@@ -58,6 +73,7 @@ class NewCassetteData: ObservableObject {
             photos: selectedPhotos,
             keywords: keywords,
             design: design,
+            customImagePath: customImagePath,
             printProgress: 1.0,
             trackName: "\(track.name).\(track.ext)",
             status: isSpecial ? (musicCompleted ? .completed : .generating) : .completed,

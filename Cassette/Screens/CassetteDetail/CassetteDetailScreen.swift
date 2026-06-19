@@ -169,10 +169,7 @@ struct CassetteDetailScreen: View {
 
     private var cassetteZStack: some View {
         ZStack {
-            Image(cassette.design.imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 320)
+            CassetteImageView(cassette: cassette, width: 320)
 
             // 키워드 오버레이
             if showKeywords && !cassette.keywords.isEmpty {

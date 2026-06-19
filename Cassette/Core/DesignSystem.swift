@@ -9,6 +9,7 @@ extension Color {
     static let appBlack       = Color.black
     static let appGray        = Color(hex: "#B3B3B3")
     static let appDarkGray    = Color(hex: "#555555")
+    static let appLightGray    = Color(hex: "#F7F7F7")
 }
 
 extension Color {
@@ -45,7 +46,7 @@ extension Font {
     static let appHeader   = cutiveMono(24)  // 섹션 헤더 (온보딩 패널 제목)
     static let appTitle    = cutiveMono(20)  // 네비게이션 바, 이름 입력
     static let appBody     = cutiveMono(18)  // 본문, 키워드, 날짜, 버튼
-    static let appMicro    = cutiveMono(14)  // 타임라벨, 카운터, 토스트, 작은 안내
+    static let appMicro    = cutiveMono(15)  // 타임라벨, 카운터, 토스트, 작은 안내
 }
 
 // MARK: - Constants

@@ -358,9 +358,10 @@ struct CassetteStackLayer: View {
                     let wrapOpacity = isWrapAround ? Double(max(0, 1 - t * 2)) : 1.0
                     let isMain = slotIndex == 0
 
-                    Image(cassette.design.imageName)
-                        .resizable().scaledToFill()
-                        .frame(width: 345, height: 222)
+                    let baseOpacity = cassette.status == .generating ? 0.5 : Double(cassette.printProgress)
+                    let cassetteOpacity = isMain ? baseOpacity : baseOpacity * Double(1 - swipeRightProgress)
+
+                    CassetteImageView(cassette: cassette, width: 345, height: 222, contentMode: .fill)
                         .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                         .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                         .rotationEffect(.degrees(slot.rotation))
@@ -368,7 +369,7 @@ struct CassetteStackLayer: View {
                             x: slot.x + (isMain ? swipeRightOffset : 0),
                             y: geo.size.height / 2 + slot.yFromMid
                         )
-                        .opacity((isMain ? (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) : (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) * Double(1 - swipeRightProgress)) * wrapOpacity)
+                        .opacity(cassetteOpacity * wrapOpacity)
                         .zIndex(slot.zIndex)
                         .gesture(isMain ? DragGesture(minimumDistance: 10)
                             .onChanged { v in
@@ -417,14 +418,13 @@ struct CassetteStackLayer: View {
                                 ? (slotVirtual0, cassetteSlots[2])
                                 : (slotVirtual6, cassetteSlots[4])
                             let interpolated = lerpSlot(from, to, t: t)
-                            Image(cassette.design.imageName)
-                                .resizable().scaledToFill()
-                                .frame(width: 345, height: 222)
+                            let wrapBaseOpacity = cassette.status == .generating ? 0.5 : Double(cassette.printProgress)
+                            CassetteImageView(cassette: cassette, width: 345, height: 222, contentMode: .fill)
                                 .scaleEffect(0.8)
                                 .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                                 .rotationEffect(.degrees(interpolated.rotation))
                                 .position(x: interpolated.x, y: geo.size.height / 2 + interpolated.yFromMid)
-                                .opacity(Double(t) * (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)))
+                                .opacity(Double(t) * wrapBaseOpacity)
                                 .zIndex(interpolated.zIndex)
                         } else {
                             let currentSlot = cassetteSlots[csi]
@@ -434,9 +434,9 @@ struct CassetteStackLayer: View {
                             let slot = lerpSlot(currentSlot, targetSlot, t: t)
                             let isMain = csi == 0
 
-                            Image(cassette.design.imageName)
-                                .resizable().scaledToFill()
-                                .frame(width: 345, height: 222)
+                            let slotBaseOpacity = cassette.status == .generating ? 0.5 : Double(cassette.printProgress)
+                            let slotOpacity = isMain ? slotBaseOpacity : slotBaseOpacity * Double(1 - swipeRightProgress)
+                            CassetteImageView(cassette: cassette, width: 345, height: 222, contentMode: .fill)
                                 .scaleEffect(isMain && circleActive ? 0.9 : 0.8)
                                 .shadow(color: .black.opacity(0.25), radius: 12, x: 4, y: 6)
                                 .rotationEffect(.degrees(slot.rotation))
@@ -444,7 +444,7 @@ struct CassetteStackLayer: View {
                                     x: slot.x + (isMain ? swipeRightOffset : 0),
                                     y: geo.size.height / 2 + slot.yFromMid
                                 )
-                                .opacity(isMain ? (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) : (cassette.status == .generating ? 0.5 : Double(cassette.printProgress)) * Double(1 - swipeRightProgress))
+                                .opacity(slotOpacity)
                                 .zIndex(slot.zIndex)
                                 .gesture(isMain ? DragGesture(minimumDistance: 10)
                                     .onChanged { v in
