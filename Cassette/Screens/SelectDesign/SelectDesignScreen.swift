@@ -4,13 +4,32 @@ import Photos
 // MARK: - DesignTab
 
 enum DesignTab {
-    case type, color, text, sticker
+    case cassette, text, sticker
 }
 
-// 1 = 통자형(all same), 2 = 2색, 3 = 3색
-enum CassetteColorType: Int, CaseIterable {
-    case solid = 1, dual = 2, triple = 3
+// MARK: - Cassette Color
+
+struct CassetteColor: Identifiable {
+    let id = UUID()
+    let name: String
+    let hex: String
+    var color: Color { Color(hex: hex) }
+    var imageName: String { "cassette_\(name)" }
 }
+
+let cassetteColors: [CassetteColor] = [
+    CassetteColor(name: "black",   hex: "000000"),
+    CassetteColor(name: "white",   hex: "FFFFFF"),
+    CassetteColor(name: "pink",    hex: "FFB3CD"),
+    CassetteColor(name: "purple",  hex: "D0A4FF"),
+    CassetteColor(name: "blue",    hex: "6FB0FF"),
+    CassetteColor(name: "skyblue", hex: "7AE8FF"),
+    CassetteColor(name: "mint",    hex: "87F1C1"),
+    CassetteColor(name: "green",   hex: "C0F69E"),
+    CassetteColor(name: "yellow",  hex: "F7F288"),
+    CassetteColor(name: "orange",  hex: "FFB389"),
+    CassetteColor(name: "red",     hex: "FF9696"),
+]
 
 // MARK: - SelectDesignScreen
 
@@ -23,31 +42,13 @@ struct SelectDesignScreen: View {
     @State private var isSaving = false
     @State private var showToast = false
     @State private var showTypePopup = false
-    @State private var selectedTab: DesignTab = .type
-    @State private var colorType: CassetteColorType = .solid
+    @State private var selectedTab: DesignTab = .cassette
 
     private let canvasWidth: CGFloat = 345
 
     private let fmt: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "yyyy.MM.dd"; return f
     }()
-
-    // type에 따라 각 레이어에 실제로 적용할 색 결정
-    var effectiveLayer1: LayerColor { cassetteData.layer1Color }
-    var effectiveLayer2: LayerColor {
-        switch colorType {
-        case .solid: return cassetteData.layer1Color
-        case .dual:  return cassetteData.layer2Color
-        case .triple: return cassetteData.layer2Color
-        }
-    }
-    var effectiveLayer3: LayerColor {
-        switch colorType {
-        case .solid: return cassetteData.layer1Color
-        case .dual:  return cassetteData.layer2Color
-        case .triple: return cassetteData.layer3Color
-        }
-    }
 
     var dateRangeString: String {
         let dates = cassetteData.selectedPhotos.map { $0.takenAt }
@@ -102,9 +103,7 @@ struct SelectDesignScreen: View {
 
                 // ── 카세트 프리뷰 ──
                 CassetteCanvasView(
-                    layer1: effectiveLayer1,
-                    layer2: effectiveLayer2,
-                    layer3: effectiveLayer3,
+                    colorName: cassetteData.selectedCassetteColor,
                     width: canvasWidth
                 )
                 .frame(maxWidth: .infinity)
@@ -116,10 +115,9 @@ struct SelectDesignScreen: View {
                     // 탭 버튼
                     GeometryReader { geo in
                         HStack(spacing: 0) {
-                            tabButton(.type,    icon: "button_cassette", width: geo.size.width / 4)
-                            tabButton(.color,   icon: "button_palette",  width: geo.size.width / 4)
-                            tabButton(.text,    icon: "button_text",     width: geo.size.width / 4)
-                            tabButton(.sticker, icon: "button_sticker",  width: geo.size.width / 4)
+                            tabButton(.cassette, icon: "button_cassette", width: geo.size.width / 3)
+                            tabButton(.text,     icon: "button_text",     width: geo.size.width / 3)
+                            tabButton(.sticker,  icon: "button_sticker",  width: geo.size.width / 3)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -128,15 +126,8 @@ struct SelectDesignScreen: View {
                     // 탭 콘텐츠
                     Group {
                         switch selectedTab {
-                        case .type:
-                            TypeSelectPanel(colorType: $colorType)
-                        case .color:
-                            ColorEditPanel(
-                                layer1: $cassetteData.layer1Color,
-                                layer2: $cassetteData.layer2Color,
-                                layer3: $cassetteData.layer3Color,
-                                colorType: colorType
-                            )
+                        case .cassette:
+                            CassetteSelectPanel(selectedColor: $cassetteData.selectedCassetteColor)
                         case .text:
                             TextEditPanel()
                         case .sticker:
@@ -230,19 +221,6 @@ struct SelectDesignScreen: View {
             }
         }
         .navigationBarHidden(true)
-        .onChange(of: colorType) {
-            switch colorType {
-            case .solid:
-                cassetteData.layer2Color.brightness = 0
-                cassetteData.layer3Color.brightness = 0
-            case .dual:
-                cassetteData.layer2Color.brightness = 0.35
-                cassetteData.layer3Color.brightness = 0
-            case .triple:
-                cassetteData.layer2Color.brightness = 0.35
-                cassetteData.layer3Color.brightness = 1.0
-            }
-        }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
@@ -271,16 +249,15 @@ struct SelectDesignScreen: View {
         }
     }
 
-    // MARK: - 렌더링만 (done 버튼 시)
+    // MARK: - 렌더링
 
     @MainActor
     private func renderOnly() async {
         let renderWidth: CGFloat = 1035
         let renderView = CassetteCanvasView(
-            layer1: effectiveLayer1,
-            layer2: effectiveLayer2,
-            layer3: effectiveLayer3,
-            width: renderWidth
+            colorName: cassetteData.selectedCassetteColor,
+            width: renderWidth,
+            applyMask: true
         )
         let renderer = ImageRenderer(content: renderView)
         renderer.scale = 1.0
@@ -298,7 +275,7 @@ struct SelectDesignScreen: View {
         }
     }
 
-    // MARK: - 사진 삭제 + 저장 (type 선택 후)
+    // MARK: - 사진 삭제 + 저장
 
     @MainActor
     private func finishAndSave() async {
@@ -321,207 +298,122 @@ struct SelectDesignScreen: View {
 // MARK: - CassetteCanvasView
 
 struct CassetteCanvasView: View {
-    let layer1: LayerColor
-    let layer2: LayerColor
-    let layer3: LayerColor
+    let colorName: String
     let width: CGFloat
+    var applyMask: Bool = false
 
     var body: some View {
         ZStack {
-            Image("cassette_layer0").resizable().scaledToFit()
-            colorizedLayer(imageName: "cassette_layer3", layer: layer3)
-            colorizedLayer(imageName: "cassette_layer2", layer: layer2)
-            colorizedLayer(imageName: "cassette_layer1", layer: layer1)
-        }
-        .frame(width: width)
-        .mask(
-            Image("cassette_mask")
+            // 0. 테이프 (최하단)
+            Image("tape")
                 .resizable()
                 .scaledToFit()
-                .frame(width: width)
-        )
-    }
-
-    @ViewBuilder
-    private func colorizedLayer(imageName: String, layer: LayerColor) -> some View {
-        Image(imageName)
-            .resizable()
-            .scaledToFit()
-            .colorMultiply(Color(hue: layer.hue, saturation: layer.saturation, brightness: 1.0))
-            .saturation(1.0 + layer.saturation * 4.0)
-            .brightness(layer.brightness * 0.2)
+            // 1. 카세트 색상
+            Image("cassette_\(colorName)")
+                .resizable()
+                .scaledToFit()
+            // 2. 볼트/하드웨어
+            Image("bolts")
+                .resizable()
+                .scaledToFit()
+            // 3. 사용자 커스터마이징 레이어 (text, sticker 등 여기에 추가)
+        }
+        .frame(width: width)
+        .modifier(CassetteMaskModifier(width: width, apply: applyMask))
     }
 }
 
-// MARK: - Type 탭
+struct CassetteMaskModifier: ViewModifier {
+    let width: CGFloat
+    let apply: Bool
 
-struct TypeSelectPanel: View {
-    @Binding var colorType: CassetteColorType
+    func body(content: Content) -> some View {
+        if apply {
+            content.mask(
+                Image("cassette_mask")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width)
+            )
+        } else {
+            content
+        }
+    }
+}
 
-    private let types: [(type: CassetteColorType, imageName: String)] = [
-        (.solid,  "type_1color"),
-        (.dual,   "type_2color"),
-        (.triple, "type_3color"),
-    ]
+// MARK: - CassetteSelectPanel
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
+struct CassetteSelectPanel: View {
+    @Binding var selectedColor: String
+
+    private let colorColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 6)
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(types, id: \.type) { item in
-                    Button { colorType = item.type } label: {
+            VStack(spacing: 20) {
+
+                // ── 카세트 타입 선택 ──
+                HStack(spacing: 12) {
+                    // 현재 유일한 디자인
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.appBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color.appBlack, lineWidth: 1.5)
+                            )
+                        Image("cassette_\(selectedColor)")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(10)
+                    }
+                    .frame(width: 110, height: 74)
+
+                    // coming soon 슬롯
+                    ForEach(0..<2) { _ in
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(colorType == item.type ? Color.appBackground : Color.appWhite)
-                            Image(item.imageName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 128)
+                                .fill(Color.appWhite)
+                            Text("coming\nsoon")
+                                .font(.appMicro)
+                                .foregroundColor(.appGray)
+                                .multilineTextAlignment(.center)
                         }
-                        .frame(width: 165, height: 110)
+                        .frame(width: 110, height: 74)
                     }
                 }
-                // more coming soon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.appWhite)
-                    Text("more\ncoming soon")
-                        .font(.appMicro)
-                        .foregroundColor(.appGray)
-                        .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+                // ── 컬러 팔레트 ──
+                LazyVGrid(columns: colorColumns, spacing: 8) {
+                    ForEach(cassetteColors) { c in
+                        let isSelected = selectedColor == c.name
+                        Button {
+                            selectedColor = c.name
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(c.color)
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .strokeBorder(Color.appGray.opacity(0.3), lineWidth: c.name == "white" ? 1 : 0)
+                                    )
+                                if isSelected {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .strokeBorder(Color.appBlack, lineWidth: 2)
+                                        .aspectRatio(1, contentMode: .fit)
+                                }
+                            }
+                        }
+                    }
                 }
-                .frame(width: 165, height: 110)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            Spacer().frame(height: 60)
-        }
-    }
-}
-
-// MARK: - Color 탭
-
-struct ColorEditPanel: View {
-    @Binding var layer1: LayerColor
-    @Binding var layer2: LayerColor
-    @Binding var layer3: LayerColor
-    let colorType: CassetteColorType
-
-    var body: some View {
-        ScrollView(showsIndicators: true) {
-            VStack(spacing: 24) {
-                // back layer: 항상 활성
-                LayerColorSection(title: "back layer", layerColor: $layer1)
-
-                // inner layer: dual, triple만 활성
-                LayerColorSection(
-                    title: "inner layer",
-                    layerColor: $layer2,
-                    disabled: colorType == .solid
-                )
-
-                // center layer: triple만 활성
-                LayerColorSection(
-                    title: "center layer",
-                    layerColor: $layer3,
-                    disabled: colorType != .triple
-                )
+                .padding(.horizontal, 24)
 
                 Spacer().frame(height: 60)
             }
-            .padding(.horizontal, 24)
             .padding(.top, 16)
         }
-    }
-}
-
-struct LayerColorSection: View {
-    let title: String
-    @Binding var layerColor: LayerColor
-    var disabled: Bool = false
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Text(title)
-                .font(.appBody)
-                .foregroundColor(disabled ? .appGray : .appBlack)
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            // Hue
-            HSBSlider(
-                value: $layerColor.hue,
-                track: LinearGradient(
-                    colors: stride(from: 0.0, through: 1.0, by: 0.05).map {
-                        Color(hue: $0, saturation: 1, brightness: 1)
-                    },
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ),
-                disabled: disabled
-            )
-
-            // Saturation
-            HSBSlider(
-                value: $layerColor.saturation,
-                track: LinearGradient(
-                    colors: [
-                        Color(hue: layerColor.hue, saturation: 0, brightness: 1),
-                        Color(hue: layerColor.hue, saturation: 1, brightness: 1)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ),
-                disabled: disabled
-            )
-
-            // Brightness
-            HSBSlider(
-                value: $layerColor.brightness,
-                track: LinearGradient(
-                    colors: [.black, .white],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ),
-                disabled: disabled
-            )
-        }
-        .opacity(disabled ? 0.35 : 1.0)
-        .allowsHitTesting(!disabled)
-    }
-}
-
-struct HSBSlider: View {
-    @Binding var value: Double
-    let track: LinearGradient
-    var disabled: Bool = false
-
-    var body: some View {
-        GeometryReader { geo in
-            let thumbSize: CGFloat = 20
-            let trackWidth = geo.size.width - thumbSize
-
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(track)
-                    .frame(height: 6)
-                    .padding(.horizontal, thumbSize / 2)
-
-                Circle()
-                    .fill(Color.appWhite)
-                    .frame(width: thumbSize, height: thumbSize)
-                    .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
-                    .offset(x: CGFloat(value) * trackWidth)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { drag in
-                                let raw = drag.location.x / trackWidth
-                                value = max(0, min(1, raw))
-                            }
-                    )
-            }
-        }
-        .frame(height: 20)
     }
 }
 

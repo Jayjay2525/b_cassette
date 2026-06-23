@@ -411,8 +411,9 @@ struct GridPhotoCell: View {
     @State private var image: UIImage? = nil
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .topTrailing) {
+        Color.clear
+            .aspectRatio(3/4, contentMode: .fit)
+            .overlay(
                 Group {
                     if let img = image {
                         Image(uiImage: img)
@@ -422,9 +423,10 @@ struct GridPhotoCell: View {
                         Color.appGray.opacity(0.3)
                     }
                 }
-                .frame(width: geo.size.width, height: geo.size.height)
-                .clipped()
-
+            )
+            .clipped()
+            .contentShape(Rectangle())
+            .overlay(alignment: .topTrailing) {
                 if isSelected {
                     ZStack {
                         Circle().fill(Color.appBlack).frame(width: 22, height: 22)
@@ -435,11 +437,7 @@ struct GridPhotoCell: View {
                     .padding(6)
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .clipped()
-        }
-        .aspectRatio(3/4, contentMode: .fit)
-        .onAppear { loadImage() }
+            .onAppear { loadImage() }
     }
 
     func loadImage() {
