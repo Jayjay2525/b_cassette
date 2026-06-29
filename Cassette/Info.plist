@@ -4,14 +4,12 @@
 <dict>
 	<key>ANTHROPIC_API_KEY</key>
 	<string>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</string>
-	<key>SUPABASE_URL</key>
-	<string>https://kdrfkvfkrdmjfeuaxvpj.supabase.co</string>
-	<key>SUPABASE_PUBLISHABLE_KEY</key>
-	<string>sb_publishable_1M_R__6hTa29wL1qlTvaGg_QN_IytJW</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cassette accesses your photos to select b-cuts.</string>
 	<key>MUSICGPT_API_KEY</key>
 	<string>K-ESLPZNxHMZRY9SUYklYGkGmsoW9JSKtBpDfMa7kn8</string>
+	<key>SUPABASE_PUBLISHABLE_KEY</key>
+	<string>sb_publishable_1M_R__6hTa29wL1qlTvaGg_QN_IytJW</string>
+	<key>SUPABASE_URL</key>
+	<string>https://kdrfkvfkrdmjfeuaxvpj.supabase.co</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>CutiveMono-Regular.ttf</string>
