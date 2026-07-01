@@ -152,6 +152,8 @@ struct SelectDesignScreen: View {
                 if showTextEditor {
                     TextEditor(text: $textInput)
                         .focused($textFieldFocused)
+                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.never)
                         .frame(width: 1, height: 1)
                         .opacity(0.001)
                         .scrollContentBackground(.hidden)
@@ -377,19 +379,13 @@ struct SelectDesignScreen: View {
 
             // ── 편집 중 텍스트 레이어 (어두운 오버레이 위, zIndex 18) ──
             if showTextEditor && !showColorPicker && !hideDimForColorPicker {
-                let atLineStart = textInput.isEmpty || textInput.hasSuffix("\n")
-                ZStack(alignment: atLineStart ? .bottomLeading : .bottomTrailing) {
-                    Text(textInput.isEmpty ? " " : textInput)
-                        .font(selectedFont.swiftUIFont(size: selectedTextSize))
-                        .foregroundColor(Color(hex: selectedTextColorHex))
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(width: 2, height: selectedTextSize)
-                        .opacity(cursorVisible ? 1 : 0)
-                        .padding(atLineStart ? .leading : .leading, atLineStart ? 0 : 2)
-                }
+                let textColor = Color(hex: selectedTextColorHex)
+                let bodyText = textInput.isEmpty ? " " : textInput
+                (
+                    Text(bodyText).foregroundColor(textColor)
+                    + Text("|").foregroundColor(cursorVisible ? .white : .clear)
+                )
                 .font(selectedFont.swiftUIFont(size: selectedTextSize))
-                .foregroundColor(Color(hex: selectedTextColorHex))
                     .padding(8)
                     .fixedSize()
                     .background(GeometryReader { geo in
