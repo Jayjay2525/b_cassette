@@ -395,7 +395,7 @@ struct SelectDesignScreen: View {
                 let bodyText = textInput.isEmpty ? " " : textInput
                 (
                     Text(bodyText).foregroundColor(textColor)
-                    + Text("|").foregroundColor(cursorVisible ? .white : .clear)
+                    + Text("|").foregroundColor(cursorVisible ? .white : .clear).font(.system(size: selectedTextSize, weight: .ultraLight))
                 )
                 .font(selectedFont.swiftUIFont(size: selectedTextSize))
                     .padding(8)
