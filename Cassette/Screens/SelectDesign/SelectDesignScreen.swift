@@ -314,6 +314,18 @@ struct SelectDesignScreen: View {
                     item: $item,
                     cassetteFrame: cassetteFrame
                 ) {
+                    // 다른 레이어 편집 중이었다면 현재 내용 먼저 저장
+                    if showTextEditor && !textInput.isEmpty {
+                        confirmedTextItems.append(CassetteTextLayer(
+                            text: textInput,
+                            font: selectedFont,
+                            size: selectedTextSize,
+                            colorHex: selectedTextColorHex,
+                            offset: textDragOffset,
+                            scale: textScale,
+                            rotation: textRotation
+                        ))
+                    }
                     // 탭 → 편집 모드 진입
                     editingLayerID = item.id
                     textInput = item.text
@@ -330,7 +342,7 @@ struct SelectDesignScreen: View {
                     showTextEditor = true
                     textFieldFocused = true
                 }
-                .allowsHitTesting(!showTypePopup)
+                .allowsHitTesting(!showTypePopup && !showTextEditor)
                 .zIndex(16)
             }
 
