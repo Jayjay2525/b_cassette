@@ -7,7 +7,7 @@ struct CassetteTextLayer: Identifiable {
     let id = UUID()
     var text: String
     var font: CassetteFont
-    var size: TextSize
+    var size: CGFloat
     var colorHex: String
     var offset: CGSize
     var scale: CGFloat = 1.0
@@ -36,17 +36,8 @@ enum CassetteFont: String, CaseIterable {
     }
 }
 
-enum TextSize: String, CaseIterable {
-    case small = "S", medium = "M", large = "L", extraLarge = "XL"
-    var pointSize: CGFloat {
-        switch self {
-        case .small: return 14
-        case .medium: return 20
-        case .large: return 28
-        case .extraLarge: return 36
-        }
-    }
-}
+// 텍스트 크기: 슬라이더로 10~60pt 연속 조절
+let textSizeRange: ClosedRange<CGFloat> = 10...60
 
 // MARK: - Cassette Color
 
@@ -96,8 +87,9 @@ struct SelectDesignScreen: View {
     @State private var textInput = ""
     @State private var selectedTextTab: TextEditTab = .font
     @State private var selectedFont: CassetteFont = .inspiration
-    @State private var selectedTextSize: TextSize = .medium
+    @State private var selectedTextSize: CGFloat = 24
     @State private var selectedTextColorHex: String = "FFFFFF"
+    @State private var colorFromPicker = false
     @State private var keyboardHeight: CGFloat = 0
     @State private var textDragOffset: CGSize = .zero
     @State private var textDragBase: CGSize = .zero
@@ -105,10 +97,14 @@ struct SelectDesignScreen: View {
     @State private var textScaleBase: CGFloat = 1.0
     @State private var textRotation: Angle = .zero
     @State private var textRotationBase: Angle = .zero
+    @State private var showColorPicker = false
+    @State private var hideDimForColorPicker = false
+    @State private var pickerSnapshot: UIImage? = nil
     @State private var confirmedTextItems: [CassetteTextLayer] = []
     @State private var editingLayerID: UUID? = nil
     @State private var cassetteFrame: CGRect = .zero
     @State private var editingTextSquare: CGFloat = 80
+    @State private var cursorVisible: Bool = true
     @FocusState private var textFieldFocused: Bool
 
     private let canvasWidth: CGFloat = 345
@@ -132,15 +128,8 @@ struct SelectDesignScreen: View {
 
                 // ── Navbar ──
                 HStack {
-                    Button {
-                        if showTextEditor {
-                            showTextEditor = false
-                            textFieldFocused = false
-                        } else {
-                            dismiss()
-                        }
-                    } label: {
-                        Image(showTextEditor ? "button_chevronLeft" : "button_chevronLeft")
+                    Button { dismiss() } label: {
+                        Image("button_chevronLeft")
                             .resizable().scaledToFit()
                             .frame(width: 24, height: 24)
                     }
@@ -149,55 +138,23 @@ struct SelectDesignScreen: View {
                         .font(.appTitle)
                         .foregroundColor(.appBlack)
                     Spacer()
-                    if showTextEditor {
-                        Button {
-                            if !textInput.isEmpty {
-                                confirmedTextItems.append(CassetteTextLayer(
-                                    text: textInput,
-                                    font: selectedFont,
-                                    size: selectedTextSize,
-                                    colorHex: selectedTextColorHex,
-                                    offset: textDragOffset,
-                                    scale: textScale,
-                                    rotation: textRotation
-                                ))
-                            }
-                            textInput = ""
-                            textDragOffset = .zero
-                            textDragBase = .zero
-                            textScale = 1.0
-                            textScaleBase = 1.0
-                            textRotation = .zero
-                            textRotationBase = .zero
-                            editingLayerID = nil
-                            showTextEditor = false
-                            textFieldFocused = false
-                        } label: {
-                            Text("done")
-                                .font(.appBody)
-                                .foregroundColor(.appWhite)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Capsule().fill(Color.appDarkGray))
-                        }
-                    } else {
-                        Button { showExitAlert = true } label: {
-                            Image("button_x")
-                                .resizable().scaledToFit()
-                                .frame(width: 24, height: 24)
-                        }
+                    Button { showExitAlert = true } label: {
+                        Image("button_x")
+                            .resizable().scaledToFit()
+                            .frame(width: 24, height: 24)
                     }
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
                 .padding(.bottom, 12)
 
-                // ── 숨겨진 TextField (키보드용) ──
+                // ── 숨겨진 TextEditor (멀티라인, 키보드용) ──
                 if showTextEditor {
-                    TextField("", text: $textInput)
+                    TextEditor(text: $textInput)
                         .focused($textFieldFocused)
-                        .opacity(0)
-                        .frame(height: 0)
+                        .frame(width: 1, height: 1)
+                        .opacity(0.001)
+                        .scrollContentBackground(.hidden)
                 }
 
                 // ── 카세트 이름 ──
@@ -324,7 +281,7 @@ struct SelectDesignScreen: View {
             }
 
             // ── 텍스트 편집 모드 어두운 오버레이 (확정 레이어들 위, 편집 텍스트 아래) ──
-            if showTextEditor && keyboardHeight > 0 {
+            if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
                     .zIndex(17)
@@ -375,11 +332,64 @@ struct SelectDesignScreen: View {
                 .zIndex(16)
             }
 
+            // ── 텍스트 편집 floating done 버튼 (dim 위) ──
+            if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            if !textInput.isEmpty {
+                                confirmedTextItems.append(CassetteTextLayer(
+                                    text: textInput,
+                                    font: selectedFont,
+                                    size: selectedTextSize,
+                                    colorHex: selectedTextColorHex,
+                                    offset: textDragOffset,
+                                    scale: textScale,
+                                    rotation: textRotation
+                                ))
+                            }
+                            textInput = ""
+                            textDragOffset = .zero
+                            textDragBase = .zero
+                            textScale = 1.0
+                            textScaleBase = 1.0
+                            textRotation = .zero
+                            textRotationBase = .zero
+                            editingLayerID = nil
+                            showTextEditor = false
+                            textFieldFocused = false
+                        } label: {
+                            Text("done")
+                                .font(.appBody)
+                                .foregroundColor(.appWhite)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(Color.appDarkGray))
+                        }
+                        .padding(.trailing, 24)
+                        .padding(.top, 15)
+                    }
+                    Spacer()
+                }
+                .zIndex(18)
+            }
+
             // ── 편집 중 텍스트 레이어 (어두운 오버레이 위, zIndex 18) ──
-            if showTextEditor && !textInput.isEmpty {
-                Text(textInput)
-                    .font(selectedFont.swiftUIFont(size: selectedTextSize.pointSize))
-                    .foregroundColor(Color(hex: selectedTextColorHex))
+            if showTextEditor && !showColorPicker && !hideDimForColorPicker {
+                let atLineStart = textInput.isEmpty || textInput.hasSuffix("\n")
+                ZStack(alignment: atLineStart ? .bottomLeading : .bottomTrailing) {
+                    Text(textInput.isEmpty ? " " : textInput)
+                        .font(selectedFont.swiftUIFont(size: selectedTextSize))
+                        .foregroundColor(Color(hex: selectedTextColorHex))
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 2, height: selectedTextSize)
+                        .opacity(cursorVisible ? 1 : 0)
+                        .padding(atLineStart ? .leading : .leading, atLineStart ? 0 : 2)
+                }
+                .font(selectedFont.swiftUIFont(size: selectedTextSize))
+                .foregroundColor(Color(hex: selectedTextColorHex))
                     .padding(8)
                     .fixedSize()
                     .background(GeometryReader { geo in
@@ -417,17 +427,34 @@ struct SelectDesignScreen: View {
                     .zIndex(18)
             }
 
-            // ── 텍스트 편집 툴바 (키보드 바로 위) ──
-            if showTextEditor && keyboardHeight > 0 {
-                TextEditorToolbar(
-                    selectedTab: $selectedTextTab,
-                    selectedFont: $selectedFont,
-                    selectedSize: $selectedTextSize,
-                    selectedColorHex: $selectedTextColorHex
-                )
-                .frame(maxWidth: .infinity)
-                .offset(y: -keyboardHeight)
+            // ── 텍스트 편집 툴바 (탭 버튼 하단이 키보드로부터 64pt 위 고정) ──
+            if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
+                VStack(spacing: 0) {
+                    Spacer()
+                    TextEditorToolbar(
+                        selectedTab: $selectedTextTab,
+                        selectedFont: $selectedFont,
+                        selectedSize: $selectedTextSize,
+                        selectedColorHex: $selectedTextColorHex,
+                        colorFromPicker: $colorFromPicker,
+                        onPickerTap: openColorPicker
+                    )
+                    .frame(maxWidth: .infinity)
+                    Spacer().frame(height: keyboardHeight + 12)
+                }
+                .ignoresSafeArea()
                 .zIndex(20)
+            }
+
+            // ── 컬러 피커 오버레이 ──
+            if showColorPicker, let snap = pickerSnapshot {
+                ColorPickerOverlay(
+                    snapshot: snap,
+                    selectedHex: $selectedTextColorHex,
+                    onDone: { showColorPicker = false; colorFromPicker = true }
+                )
+                .ignoresSafeArea()
+                .zIndex(99)
             }
 
             // ── 스티커 패널 (인라인, 어두운 오버레이 없음) ──
@@ -499,6 +526,15 @@ struct SelectDesignScreen: View {
                 .zIndex(51)
             }
         }
+        .onChange(of: showTextEditor) {
+            if showTextEditor {
+                cursorVisible = true
+                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+                    if !showTextEditor { timer.invalidate(); return }
+                    cursorVisible.toggle()
+                }
+            }
+        }
         .coordinateSpace(name: "outerZStack")
         .navigationBarHidden(true)
         .ignoresSafeArea(.keyboard)
@@ -509,6 +545,29 @@ struct SelectDesignScreen: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardHeight = 0
+            // enter 등으로 키보드가 닫히면 텍스트 편집 종료 (텍스트 저장)
+            if showTextEditor {
+                if !textInput.isEmpty {
+                    confirmedTextItems.append(CassetteTextLayer(
+                        text: textInput,
+                        font: selectedFont,
+                        size: selectedTextSize,
+                        colorHex: selectedTextColorHex,
+                        offset: textDragOffset,
+                        scale: textScale,
+                        rotation: textRotation
+                    ))
+                }
+                textInput = ""
+                textDragOffset = .zero
+                textDragBase = .zero
+                textScale = 1.0
+                textScaleBase = 1.0
+                textRotation = .zero
+                textRotationBase = .zero
+                editingLayerID = nil
+                showTextEditor = false
+            }
         }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
@@ -554,6 +613,24 @@ struct SelectDesignScreen: View {
     }
 
     // MARK: - 렌더링
+
+    private func openColorPicker() {
+        hideDimForColorPicker = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            pickerSnapshot = snapshotMainWindow()
+            showColorPicker = true
+            hideDimForColorPicker = false
+        }
+    }
+
+    private func snapshotMainWindow() -> UIImage? {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else { return nil }
+        let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
+        return renderer.image { ctx in
+            window.layer.render(in: ctx.cgContext)
+        }
+    }
 
     @MainActor
     private func renderOnly() async {
@@ -636,7 +713,7 @@ struct CassetteCanvasView: View {
             // ── 텍스트 레이어 ──
             ForEach(textLayers) { item in
                 Text(item.text)
-                    .font(item.font.swiftUIFont(size: item.size.pointSize * s))
+                    .font(item.font.swiftUIFont(size: item.size * s))
                     .foregroundColor(item.color)
                     .scaleEffect(item.scale)
                     .rotationEffect(item.rotation)
@@ -975,8 +1052,10 @@ struct StickerPhotoCell: View {
 struct TextEditorToolbar: View {
     @Binding var selectedTab: TextEditTab
     @Binding var selectedFont: CassetteFont
-    @Binding var selectedSize: TextSize
+    @Binding var selectedSize: CGFloat
     @Binding var selectedColorHex: String
+    @Binding var colorFromPicker: Bool
+    var onPickerTap: () -> Void = {}
 
     private let textColorHexes: [String] = [
         "FFFFFF", "000000",
@@ -986,55 +1065,74 @@ struct TextEditorToolbar: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── 탭 버튼 row ──
-            HStack(spacing: 0) {
+        VStack(spacing: 12) {
+            // ── 탭 버튼 row (중앙 정렬, 72×40 rounded rect) ──
+            HStack(spacing: 8) {
                 tabButton("font", tab: .font)
                 tabButton("size", tab: .size)
                 tabButton("color", tab: .color)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.bottom, 8)
 
-            Divider()
+            // ── 탭 콘텐츠 (고정 높이로 탭 위치 안정) ──
+            Group {
+                switch selectedTab {
+                case .font:
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(CassetteFont.allCases, id: \.self) { f in
+                                fontChip(f)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                case .size:
+                    TextSizeSlider(value: $selectedSize)
+                        .padding(.horizontal, 16)
+                case .color:
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            // 컬러 피커 버튼 (배경: 현재 선택 컬러, 피커 사용 시 선택 stroke)
+                            Button { onPickerTap() } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(hex: selectedColorHex))
+                                        .frame(width: 36, height: 36)
+                                    Image("button_color_picker")
+                                        .resizable()
+                                        .frame(width: 36, height: 36)
+                                }
+                                .overlay(Circle().strokeBorder(Color.black, lineWidth: colorFromPicker ? 1 : 0))
+                            }
 
-            // ── 탭 콘텐츠 ──
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    switch selectedTab {
-                    case .font:
-                        ForEach(CassetteFont.allCases, id: \.self) { f in
-                            fontChip(f)
+                            ForEach(Array(textColorHexes.enumerated()), id: \.offset) { i, hex in
+                                colorChip(hex, index: i)
+                            }
                         }
-                    case .size:
-                        ForEach(TextSize.allCases, id: \.self) { s in
-                            sizeChip(s)
-                        }
-                    case .color:
-                        ForEach(Array(textColorHexes.enumerated()), id: \.offset) { i, hex in
-                            colorChip(hex, index: i)
-                        }
+                        .padding(.horizontal, 16)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
             }
+            .frame(height: 44)
         }
-        .background(Color(hex: "F7F7F7"))
+        .padding(.top, 12)
     }
 
     @ViewBuilder
     private func tabButton(_ label: String, tab: TextEditTab) -> some View {
+        let isSelected = selectedTab == tab
         Button { selectedTab = tab } label: {
-            VStack(spacing: 4) {
-                Text(label)
-                    .font(.appBody)
-                    .foregroundColor(selectedTab == tab ? .appBlack : .appGray)
-                Rectangle()
-                    .fill(selectedTab == tab ? Color.appBlack : Color.clear)
-                    .frame(height: 1.5)
-            }
-            .frame(maxWidth: .infinity)
+            Text(label)
+                .font(.appBody)
+                .foregroundColor(isSelected ? .appBlack : .white)
+                .frame(width: 72, height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(isSelected ? Color.black : Color.clear, lineWidth: 1)
+                )
         }
     }
 
@@ -1043,43 +1141,72 @@ struct TextEditorToolbar: View {
         let isSelected = selectedFont == f
         Button { selectedFont = f } label: {
             Text(f.displayName)
-                .font(f.swiftUIFont(size: 14))
-                .foregroundColor(isSelected ? .appWhite : .appBlack)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .font(f.swiftUIFont(size: 16))
+                .foregroundColor(isSelected ? .appBlack : .white)
+                .padding(.horizontal, 16)
+                .frame(height: 40)
                 .background(
-                    Capsule().fill(isSelected ? Color.appBlack : Color.appWhite)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
                 )
                 .overlay(
-                    Capsule().strokeBorder(isSelected ? Color.clear : Color.appGray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(isSelected ? Color.black : Color.clear, lineWidth: 1)
                 )
-        }
-    }
-
-    @ViewBuilder
-    private func sizeChip(_ s: TextSize) -> some View {
-        let isSelected = selectedSize == s
-        Button { selectedSize = s } label: {
-            Text(s.rawValue)
-                .font(.appBody)
-                .foregroundColor(isSelected ? .appWhite : .appBlack)
-                .frame(width: 44, height: 36)
-                .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Color.appBlack : Color.appWhite))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(isSelected ? Color.clear : Color.appGray.opacity(0.3), lineWidth: 1))
         }
     }
 
     @ViewBuilder
     private func colorChip(_ hex: String, index: Int) -> some View {
-        let isSelected = selectedColorHex.uppercased() == hex.uppercased()
+        let isSelected = selectedColorHex.uppercased() == hex.uppercased() && !colorFromPicker
         let isWhite = index == 0
-        Button { selectedColorHex = hex } label: {
-            Circle()
+        Button { selectedColorHex = hex; colorFromPicker = false } label: {
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color(hex: hex))
-                .frame(width: 32, height: 32)
-                .overlay(Circle().strokeBorder(Color(hex: "CCCCCC"), lineWidth: isWhite ? 1 : 0))
-                .overlay(Circle().strokeBorder(Color(hex: "000000"), lineWidth: isSelected ? 2.5 : 0).padding(-2))
+                .frame(width: 36, height: 36)
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(hex: "CCCCCC"), lineWidth: isWhite ? 1 : 0))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.black, lineWidth: isSelected ? 1 : 0))
         }
+    }
+}
+
+// MARK: - TextSizeSlider
+
+struct TextSizeSlider: View {
+    @Binding var value: CGFloat
+
+    private let trackWidth: CGFloat = 324
+    private let handleWidth: CGFloat = 14
+    private let minVal: CGFloat = 10
+    private let maxVal: CGFloat = 60
+
+    // ZStack 중앙 기준 핸들 offset
+    private var handleOffset: CGFloat {
+        let fraction = (value - minVal) / (maxVal - minVal)
+        return (fraction - 0.5) * (trackWidth - handleWidth)
+    }
+
+    var body: some View {
+        ZStack {
+            Image("text_size_graph")
+                .resizable()
+                .frame(width: trackWidth, height: 20)
+
+            Image("text_size_handle")
+                .resizable()
+                .frame(width: handleWidth, height: 28)
+                .offset(x: handleOffset)
+        }
+        .frame(width: trackWidth, height: 40)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { gesture in
+                    // gesture.location.x는 ZStack 내 0-based 좌표
+                    let clamped = min(max(gesture.location.x, handleWidth / 2), trackWidth - handleWidth / 2)
+                    let fraction = (clamped - handleWidth / 2) / (trackWidth - handleWidth)
+                    value = (minVal + fraction * (maxVal - minVal)).rounded()
+                }
+        )
     }
 }
 
@@ -1179,7 +1306,7 @@ struct ConfirmedTextLayerView: View {
 
     var body: some View {
         Text(item.text)
-            .font(item.font.swiftUIFont(size: item.size.pointSize))
+            .font(item.font.swiftUIFont(size: item.size))
             .foregroundColor(item.color)
             .padding(8)
             .fixedSize()
@@ -1215,5 +1342,116 @@ struct ConfirmedTextLayerView: View {
                     .onEnded { v in item.rotation += v }
             )
             .onTapGesture { onTap() }
+    }
+}
+
+// MARK: - ColorPickerOverlay
+
+struct ColorPickerOverlay: View {
+    let snapshot: UIImage
+    @Binding var selectedHex: String
+    var onDone: () -> Void
+
+    @State private var location: CGPoint = CGPoint(
+        x: UIScreen.main.bounds.midX,
+        y: UIScreen.main.bounds.midY
+    )
+
+    private let loupeSize: CGFloat = 80
+    private let dotSize: CGFloat = 4
+
+    var body: some View {
+        let screenSize = UIScreen.main.bounds.size
+        ZStack {
+            Image(uiImage: snapshot)
+                .resizable()
+                .ignoresSafeArea()
+
+            // 전체 화면 드래그 제스처
+            Color.clear
+                .contentShape(Rectangle())
+                .ignoresSafeArea()
+                .gesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                        .onChanged { v in
+                            location = v.location
+                            if let hex = snapshot.hexColor(at: v.location, screenSize: screenSize) {
+                                selectedHex = hex
+                            }
+                        }
+                        .onEnded { _ in onDone() }
+                )
+
+            // 2×2 흰 점
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: dotSize, height: dotSize)
+                .position(location)
+                .allowsHitTesting(false)
+
+            // 루페 (점 위로 고정 offset)
+            let loupeY = location.y - loupeSize / 2 - dotSize / 2 - 20
+            let clampedLoupeY = max(loupeY, loupeSize / 2 + 60)
+            ZStack {
+                if let cropped = snapshot.magnifiedRegion(
+                    around: location, screenSize: screenSize,
+                    zoomFactor: 4, displaySize: loupeSize
+                ) {
+                    Image(uiImage: cropped)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: loupeSize, height: loupeSize)
+                        .clipShape(Circle())
+                }
+                Circle()
+                    .strokeBorder(Color.white, lineWidth: 2)
+                    .frame(width: loupeSize, height: loupeSize)
+                // 중앙 십자선
+                Group {
+                    Rectangle().frame(width: 1, height: 14)
+                    Rectangle().frame(width: 14, height: 1)
+                }
+                .foregroundColor(.white.opacity(0.8))
+            }
+            .position(x: location.x, y: clampedLoupeY)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+// MARK: - UIImage pixel helpers
+
+extension UIImage {
+    func hexColor(at screenPoint: CGPoint, screenSize: CGSize) -> String? {
+        let scaleX = size.width / screenSize.width
+        let scaleY = size.height / screenSize.height
+        let px = screenPoint.x * scaleX
+        let py = screenPoint.y * scaleY
+
+        // UIKit 컨텍스트 사용: 좌표계 뒤집힘을 UIKit이 자동 처리
+        UIGraphicsBeginImageContextWithOptions(CGSize(width: 1, height: 1), true, 1)
+        defer { UIGraphicsEndImageContext() }
+        guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
+        ctx.translateBy(x: -px, y: -py)
+        draw(at: .zero)
+        guard let ptr = ctx.data?.bindMemory(to: UInt8.self, capacity: 4) else { return nil }
+        // UIKit 컨텍스트는 iOS(ARM, little-endian)에서 BGRA 순서
+        return String(format: "%02X%02X%02X", ptr[2], ptr[1], ptr[0])
+    }
+
+    func magnifiedRegion(around screenPoint: CGPoint, screenSize: CGSize,
+                         zoomFactor: CGFloat, displaySize: CGFloat) -> UIImage? {
+        guard let cgImage = self.cgImage else { return nil }
+        let scaleX = CGFloat(cgImage.width) / screenSize.width
+        let scaleY = CGFloat(cgImage.height) / screenSize.height
+        let cropPtSize = displaySize / zoomFactor
+        let cropRect = CGRect(
+            x: (screenPoint.x - cropPtSize / 2) * scaleX,
+            y: (screenPoint.y - cropPtSize / 2) * scaleY,
+            width: cropPtSize * scaleX,
+            height: cropPtSize * scaleY
+        )
+        guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
+        return UIImage(cgImage: cropped)
     }
 }
