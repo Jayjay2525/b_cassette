@@ -194,15 +194,6 @@ struct SelectDesignScreen: View {
                     }
                 )
 
-                // ── 스티커 style 버튼 (스티커 패널 열릴때만 표시) ──
-                if showStickerPanel {
-                    HStack(spacing: 12) {
-                        styleButton(icon: "button_background", style: .background)
-                        styleButton(icon: "button_foreground", style: .foreground)
-                    }
-                    .padding(.top, 16)
-                    .transition(.opacity)
-                }
 
                 Spacer()
 
@@ -268,6 +259,22 @@ struct SelectDesignScreen: View {
                         selectedStickerPhoto = nil
                     }
                     .zIndex(9)
+            }
+
+            // ── 스티커 style 버튼 (dismiss 레이어 위, 패널 아래) ──
+            if showStickerPanel {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 12) {
+                        styleButton(icon: "button_background", style: .background)
+                        styleButton(icon: "button_foreground", style: .foreground)
+                    }
+                    .padding(.bottom, 353 + 16)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(true)
+                .transition(.opacity)
+                .zIndex(11)
             }
 
             // ── 카세트 패널 (인라인, 어두운 오버레이 없음) ──
@@ -913,53 +920,67 @@ struct StickerEditPanel: View {
     private let photoColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
 
-            // ── 탭 버튼 ──
-            HStack(spacing: 12) {
-                tabButton(icon: "button_image", tab: .image)
-                tabButton(icon: "button_emoji", tab: .emoji)
-            }
-            .padding(.bottom, 14)
-            .padding(.top, 16)
+                // ── 탭 버튼 ──
+                HStack(spacing: 12) {
+                    tabButton(icon: "button_image", tab: .image)
+                    tabButton(icon: "button_emoji", tab: .emoji)
+                }
+                .padding(.bottom, 14)
+                .padding(.top, 16)
 
-            Divider()
-                .frame(width: 208)
+                Divider()
+                    .frame(width: 208)
 
-            // ── 탭 콘텐츠 (b-cut 레이블 고정, 그리드만 스크롤) ──
-            switch selectedTab {
-            case .image:
-                Text("b-cut from film")
-                    .font(.appBody)
-                    .foregroundColor(.appDarkGray)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 14)
-                    .padding(.bottom, 12)
+                // ── 탭 콘텐츠 (b-cut 레이블 고정, 그리드만 스크롤) ──
+                switch selectedTab {
+                case .image:
+                    Text("b-cut from film")
+                        .font(.appBody)
+                        .foregroundColor(.appDarkGray)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 14)
+                        .padding(.bottom, 12)
 
-                ScrollView(showsIndicators: false) {
-                    LazyVGrid(columns: photoColumns, spacing: 4) {
-                        ForEach(photos) { photo in
-                            let isSelected = selectedPhoto?.id == photo.id
-                            StickerPhotoCell(photo: photo, isSelected: isSelected)
-                                .onTapGesture {
-                                    let next: BCutPhoto? = isSelected ? nil : photo
-                                    selectedPhoto = next
-                                    onSelect(next)
-                                }
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(columns: photoColumns, spacing: 4) {
+                            ForEach(photos) { photo in
+                                let isSelected = selectedPhoto?.id == photo.id
+                                StickerPhotoCell(photo: photo, isSelected: isSelected)
+                                    .onTapGesture {
+                                        let next: BCutPhoto? = isSelected ? nil : photo
+                                        selectedPhoto = next
+                                        onSelect(next)
+                                    }
+                            }
                         }
+                        .padding(.bottom, 70)
                     }
+                    .frame(maxHeight: .infinity)
+                case .emoji:
+                    ScrollView(showsIndicators: false) {
+                        Text("coming soon")
+                            .font(.appMicro)
+                            .foregroundColor(.appGray)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 32)
+                    }
+                    .frame(maxHeight: .infinity)
                 }
-                .frame(maxHeight: .infinity)
-            case .emoji:
-                ScrollView(showsIndicators: false) {
-                    Text("coming soon")
-                        .font(.appMicro)
-                        .foregroundColor(.appGray)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 32)
-                }
-                .frame(maxHeight: .infinity)
             }
+
+            // ── done 버튼 (그리드 위 floating) ──
+            Button { onDone() } label: {
+                Text("done")
+                    .font(.appBody)
+                    .foregroundColor(.appWhite)
+                    .frame(width: 201, height: 48)
+                    .background(Capsule().fill(selectedPhoto != nil ? Color.appDarkGray : Color.appGray))
+            }
+            .disabled(selectedPhoto == nil)
+            .padding(.bottom, 11)
 
         }
         .frame(height: 353)
