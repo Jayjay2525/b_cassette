@@ -251,7 +251,7 @@ struct SelectDesignScreen: View {
                     .background(Capsule().fill(Color.appDarkGray))
                 }
                 .padding(.bottom, 11)
-                .opacity(showTextEditor ? 0 : 1)
+                .opacity(showTextEditor || showStickerPanel ? 0 : 1)
             }
 
             // ── 패널 열려있을 때 뒤쪽 탭으로 닫기 ──
@@ -479,6 +479,11 @@ struct SelectDesignScreen: View {
                             previewImageLayer = nil
                         }
                     },
+                    onCancel: {
+                        previewImageLayer = nil
+                        selectedStickerPhoto = nil
+                        withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
+                    },
                     onDone: {
                         if let layer = previewImageLayer {
                             confirmedImageItems.append(layer)
@@ -490,6 +495,7 @@ struct SelectDesignScreen: View {
                 )
                 .transition(.move(edge: .bottom))
                 .zIndex(10)
+
             }
 
             // ── 토스트 ──
@@ -604,18 +610,20 @@ struct SelectDesignScreen: View {
 
     @ViewBuilder
     private func styleButton(icon: String, style: StickerStyle) -> some View {
-        Button {
-            stickerStyle = style
-        } label: {
+        let isSelected = stickerStyle == style
+        Button { stickerStyle = style } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(stickerStyle == style ? Color.appBlack : Color.appWhite)
-                    .frame(width: 48, height: 48)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                    .frame(width: 55, height: 40)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(isSelected ? Color.black : Color.clear, lineWidth: 1)
+                    )
                 Image(icon)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
-                    .colorMultiply(stickerStyle == style ? .white : .black)
+                    .frame(width: 40, height: 40)
             }
         }
     }
@@ -899,84 +907,64 @@ struct StickerEditPanel: View {
     @Binding var selectedPhoto: BCutPhoto?
     let photos: [BCutPhoto]
     var onSelect: (BCutPhoto?) -> Void = { _ in }
+    var onCancel: () -> Void = {}
     var onDone: () -> Void
 
-    private let photoColumns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 3)
+    private let photoColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
 
     var body: some View {
         VStack(spacing: 0) {
-            // drag indicator
-            Capsule()
-                .fill(Color.appGray.opacity(0.4))
-                .frame(width: 36, height: 4)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
 
             // ── 탭 버튼 ──
             HStack(spacing: 12) {
                 tabButton(icon: "button_image", tab: .image)
                 tabButton(icon: "button_emoji", tab: .emoji)
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, 14)
+            .padding(.top, 16)
 
             Divider()
+                .frame(width: 208)
 
-            // ── 탭 콘텐츠 ──
-            ScrollView(showsIndicators: false) {
-                switch selectedTab {
-                case .image:
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("b-cut from film")
-                            .font(.appMicro)
-                            .foregroundColor(.appDarkGray)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
+            // ── 탭 콘텐츠 (b-cut 레이블 고정, 그리드만 스크롤) ──
+            switch selectedTab {
+            case .image:
+                Text("b-cut from film")
+                    .font(.appBody)
+                    .foregroundColor(.appDarkGray)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 14)
+                    .padding(.bottom, 12)
 
-                        LazyVGrid(columns: photoColumns, spacing: 2) {
-                            ForEach(photos) { photo in
-                                let isSelected = selectedPhoto?.id == photo.id
-                                StickerPhotoCell(photo: photo, isSelected: isSelected)
-                                    .onTapGesture {
-                                        let next: BCutPhoto? = isSelected ? nil : photo
-                                        selectedPhoto = next
-                                        onSelect(next)
-                                    }
-                            }
+                ScrollView(showsIndicators: false) {
+                    LazyVGrid(columns: photoColumns, spacing: 4) {
+                        ForEach(photos) { photo in
+                            let isSelected = selectedPhoto?.id == photo.id
+                            StickerPhotoCell(photo: photo, isSelected: isSelected)
+                                .onTapGesture {
+                                    let next: BCutPhoto? = isSelected ? nil : photo
+                                    selectedPhoto = next
+                                    onSelect(next)
+                                }
                         }
                     }
-                case .emoji:
+                }
+                .frame(maxHeight: .infinity)
+            case .emoji:
+                ScrollView(showsIndicators: false) {
                     Text("coming soon")
                         .font(.appMicro)
                         .foregroundColor(.appGray)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 32)
                 }
+                .frame(maxHeight: .infinity)
             }
 
-            // ── done 버튼 ──
-            Button { onDone() } label: {
-                Text("done")
-                    .font(.appBody)
-                    .foregroundColor(.appWhite)
-                    .frame(width: 201, height: 48)
-                    .background(Capsule().fill(selectedPhoto != nil ? Color.appDarkGray : Color(hex: "B3B3B3")))
-            }
-            .disabled(selectedPhoto == nil)
-            .padding(.vertical, 11)
         }
-        .frame(height: 387)
-        .clipped()
-        .background(
-            Color(hex: "F7F7F7")
-                .clipShape(UnevenRoundedRectangle(
-                    topLeadingRadius: 16,
-                    bottomLeadingRadius: 0,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: 16
-                ))
-                .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: -4)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .frame(height: 353)
+        .background(Color.appWhite)
+        .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: -4)
     }
 
     @ViewBuilder
@@ -994,7 +982,7 @@ struct StickerEditPanel: View {
                 Image(icon)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 24, height: 24)
+                    .frame(width: 40, height: 40)
             }
         }
     }
@@ -1007,7 +995,7 @@ struct StickerPhotoCell: View {
 
     var body: some View {
         Color.clear
-            .aspectRatio(1, contentMode: .fit)
+            .aspectRatio(3.0/4.0, contentMode: .fit)
             .overlay(
                 Group {
                     if let img = image {
