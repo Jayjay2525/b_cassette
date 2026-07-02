@@ -92,8 +92,8 @@ struct SelectDesignScreen: View {
     @State private var selectedTextColorHex: String = "FFFFFF"
     @State private var colorFromPicker = false
     @State private var keyboardHeight: CGFloat = 0
-    @State private var textDragOffset: CGSize = .zero
-    @State private var textDragBase: CGSize = .zero
+    @State private var textDragOffset: CGSize = CGSize(width: 0, height: 30)
+    @State private var textDragBase: CGSize = CGSize(width: 0, height: 30)
     @State private var textScale: CGFloat = 1.0
     @State private var textScaleBase: CGFloat = 1.0
     @State private var textRotation: Angle = .zero
@@ -382,7 +382,7 @@ struct SelectDesignScreen: View {
                                 ))
                             }
                             textInput = ""
-                            textDragOffset = .zero
+                            textDragOffset = CGSize(width: 0, height: 30)
                             textDragBase = .zero
                             textScale = 1.0
                             textScaleBase = 1.0
@@ -591,7 +591,7 @@ struct SelectDesignScreen: View {
                     ))
                 }
                 textInput = ""
-                textDragOffset = .zero
+                textDragOffset = CGSize(width: 0, height: 30)
                 textDragBase = .zero
                 textScale = 1.0
                 textScaleBase = 1.0
@@ -1407,6 +1407,17 @@ struct ConfirmedTextLayerView: View {
                 x: cassetteFrame.midX + item.offset.width + dragDelta.width,
                 y: cassetteFrame.midY + item.offset.height + dragDelta.height
             )
+            .mask {
+                if cassetteFrame.width > 0 {
+                    Image("cassette_mask_outside")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                        .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                } else {
+                    Color.white
+                }
+            }
             .gesture(
                 DragGesture(minimumDistance: 4)
                     .updating($dragDelta) { v, state, _ in state = v.translation }
