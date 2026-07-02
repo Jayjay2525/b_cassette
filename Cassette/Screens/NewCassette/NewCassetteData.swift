@@ -15,6 +15,11 @@ class NewCassetteData: ObservableObject {
     @Published var selectedCassetteColor: String = "white"
     var customImagePath: String? = nil
     @Published var shouldDismiss: Bool = false
+    var draftImageLayers: [CassetteImageLayer] = []
+    var draftTextLayers: [CassetteTextLayer] = []
+    var draftOrderedLayerIDs: [UUID] = []
+    var draftImageCreationOrder: [UUID] = []
+    var draftTextCreationOrder: [UUID] = []
     var expiresAt: Date = Date().addingTimeInterval(86400 * 30)  // 30일 후
     let cassetteID: UUID = UUID()  // 로컬 파일 저장 경로용 고정 ID
 

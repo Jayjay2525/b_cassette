@@ -4,7 +4,7 @@ import Photos
 // MARK: - Text Layer
 
 struct CassetteTextLayer: Identifiable {
-    let id = UUID()
+    var id: UUID
     var text: String
     var font: CassetteFont
     var size: CGFloat
@@ -14,6 +14,17 @@ struct CassetteTextLayer: Identifiable {
     var rotation: Angle = .zero
 
     var color: Color { Color(hex: colorHex) }
+
+    init(id: UUID = UUID(), text: String, font: CassetteFont, size: CGFloat, colorHex: String, offset: CGSize, scale: CGFloat = 1.0, rotation: Angle = .zero) {
+        self.id = id
+        self.text = text
+        self.font = font
+        self.size = size
+        self.colorHex = colorHex
+        self.offset = offset
+        self.scale = scale
+        self.rotation = rotation
+    }
 }
 
 // MARK: - Text Edit Enums
@@ -81,7 +92,12 @@ struct SelectDesignScreen: View {
     @State private var selectedStickerPhoto: BCutPhoto? = nil
     @State private var previewImageLayer: CassetteImageLayer? = nil
     @State private var confirmedImageItems: [CassetteImageLayer] = []
+    @State private var isDesignRestored: Bool = false
     @State private var activeImageLayerID: UUID? = nil
+    @State private var orderedLayerIDs: [UUID] = []       // bottom→top z-order
+    @State private var imageCreationOrder: [UUID] = []    // for display naming
+    @State private var textCreationOrder: [UUID] = []     // for display naming
+    @State private var editingLayerZPos: Int? = nil       // z-pos when re-editing text
 
     // ── Text 편집 ──
     @State private var showTextEditor = false
@@ -161,7 +177,7 @@ struct SelectDesignScreen: View {
                 }
 
                 // ── 카세트 이름 ──
-                VStack(spacing: 6) {
+                VStack(spacing: 12) {
                     Text(cassetteData.name.isEmpty ? "untitled" : cassetteData.name)
                         .font(.appTitle)
                         .foregroundColor(.appBlack)
@@ -174,7 +190,7 @@ struct SelectDesignScreen: View {
                         .font(.appBody)
                         .foregroundColor(.appDarkGray)
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 10)
 
                 // ── 카세트 프리뷰 ──
                 CassetteCanvasView(
@@ -201,6 +217,26 @@ struct SelectDesignScreen: View {
                 Spacer()
             }
 
+            // ── 레이어 패널 (zIndex 17 — 이미지 레이어보다 위) ──
+            if !showStickerPanel && !showCassettePanel && !showTextEditor {
+                VStack(spacing: 0) {
+                    Spacer().frame(height: cassetteFrame.maxY + 30)
+                    LayerPanelView(
+                        orderedLayerIDs: $orderedLayerIDs,
+                        confirmedImageItems: $confirmedImageItems,
+                        confirmedTextItems: $confirmedTextItems,
+                        imageCreationOrder: imageCreationOrder,
+                        textCreationOrder: textCreationOrder
+                    ) { id in
+                        confirmedImageItems.removeAll { $0.id == id }
+                        confirmedTextItems.removeAll { $0.id == id }
+                        orderedLayerIDs.removeAll { $0 == id }
+                    }
+                    Spacer()
+                }
+                .zIndex(17)
+            }
+
             // ── 하단 툴 버튼 + done (이미지 레이어보다 위) ──
             VStack {
                 Spacer()
@@ -220,7 +256,7 @@ struct SelectDesignScreen: View {
                     }
                     Spacer()
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 10)
                 Button {
                     guard !isSaving else { return }
                     isSaving = true
@@ -259,8 +295,19 @@ struct SelectDesignScreen: View {
                             showCassettePanel = false
                             showStickerPanel = false
                         }
+                        // 바깥 탭으로 닫을 때 편집 중인 이미지 레이어 저장
+                        if let layer = previewImageLayer {
+                            confirmedImageItems.append(layer)
+                            if let zPos = editingLayerZPos {
+                                orderedLayerIDs.insert(layer.id, at: min(zPos, orderedLayerIDs.count))
+                            } else {
+                                orderedLayerIDs.append(layer.id)
+                            }
+                            if !imageCreationOrder.contains(layer.id) { imageCreationOrder.append(layer.id) }
+                        }
                         previewImageLayer = nil
                         selectedStickerPhoto = nil
+                        editingLayerZPos = nil
                     }
                     .zIndex(9)
             }
@@ -290,7 +337,7 @@ struct SelectDesignScreen: View {
                     }
                 )
                 .transition(.move(edge: .bottom))
-                .zIndex(10)
+                .zIndex(20)
             }
 
             // ── 텍스트 편집 모드 어두운 오버레이 (확정 레이어들 위, 편집 텍스트 아래) ──
@@ -301,22 +348,52 @@ struct SelectDesignScreen: View {
                     .allowsHitTesting(false)
             }
 
-            // ── 이미지 레이어들 (드래그/핀치/회전 가능) ──
-            ForEach($confirmedImageItems) { $item in
-                ConfirmedImageLayerView(item: $item, cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID) {
-                    // 탭 → 해당 레이어를 다시 편집 모드로
-                    let tapped = item
-                    confirmedImageItems.removeAll { $0.id == tapped.id }
-                    previewImageLayer = tapped
-                    selectedStickerPhoto = tapped.photo
-                    stickerStyle = tapped.maskStyle
-                    withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
+            // ── 레이어들 (orderedLayerIDs 순서로 z-order 결정, last=top) ──
+            ForEach(orderedLayerIDs, id: \.self) { id in
+                if let idx = confirmedImageItems.firstIndex(where: { $0.id == id }) {
+                    ConfirmedImageLayerView(item: $confirmedImageItems[idx], cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID) {
+                        let tapped = confirmedImageItems[idx]
+                        editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
+                        confirmedImageItems.remove(at: idx)
+                        orderedLayerIDs.removeAll { $0 == tapped.id }
+                        previewImageLayer = tapped
+                        selectedStickerPhoto = tapped.photo
+                        stickerStyle = tapped.maskStyle
+                        withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
+                    }
+                    .allowsHitTesting(!showTypePopup && !showStickerPanel && !showTextEditor)
+                } else if let idx = confirmedTextItems.firstIndex(where: { $0.id == id }) {
+                    ConfirmedTextLayerView(item: $confirmedTextItems[idx], cassetteFrame: cassetteFrame) {
+                        if showTextEditor && !textInput.isEmpty {
+                            let saved = CassetteTextLayer(text: textInput, font: selectedFont, size: selectedTextSize, colorHex: selectedTextColorHex, offset: textDragOffset, scale: textScale, rotation: textRotation)
+                            confirmedTextItems.append(saved)
+                            orderedLayerIDs.append(saved.id)
+                            if !textCreationOrder.contains(saved.id) { textCreationOrder.append(saved.id) }
+                        }
+                        let tapped = confirmedTextItems[idx]
+                        editingLayerID = tapped.id
+                        editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
+                        textInput = tapped.text
+                        selectedFont = tapped.font
+                        selectedTextSize = tapped.size
+                        selectedTextColorHex = tapped.colorHex
+                        textDragOffset = tapped.offset
+                        textDragBase = tapped.offset
+                        textScale = tapped.scale
+                        textScaleBase = tapped.scale
+                        textRotation = tapped.rotation
+                        textRotationBase = tapped.rotation
+                        confirmedTextItems.remove(at: idx)
+                        orderedLayerIDs.removeAll { $0 == tapped.id }
+                        showTextEditor = true
+                        textFieldFocused = true
+                    }
+                    .allowsHitTesting(!showTypePopup && !showTextEditor && !showStickerPanel)
                 }
-                .allowsHitTesting(!showTypePopup && !showStickerPanel && !showTextEditor)
-                .zIndex(15)
             }
+            .zIndex(15)
 
-            // ── 스티커 프리뷰 레이어 (선택 즉시 표시, done 전) ──
+            // ── 스티커 프리뷰 레이어 ──
             if let _ = previewImageLayer {
                 ConfirmedImageLayerView(item: Binding(
                     get: { previewImageLayer! },
@@ -327,44 +404,6 @@ struct SelectDesignScreen: View {
                 .zIndex(15)
             }
 
-            // ── 완성된 텍스트 레이어들 (드래그/핀치/회전/탭 편집 가능) ──
-            ForEach($confirmedTextItems) { $item in
-                ConfirmedTextLayerView(
-                    item: $item,
-                    cassetteFrame: cassetteFrame
-                ) {
-                    // 다른 레이어 편집 중이었다면 현재 내용 먼저 저장
-                    if showTextEditor && !textInput.isEmpty {
-                        confirmedTextItems.append(CassetteTextLayer(
-                            text: textInput,
-                            font: selectedFont,
-                            size: selectedTextSize,
-                            colorHex: selectedTextColorHex,
-                            offset: textDragOffset,
-                            scale: textScale,
-                            rotation: textRotation
-                        ))
-                    }
-                    // 탭 → 편집 모드 진입
-                    editingLayerID = item.id
-                    textInput = item.text
-                    selectedFont = item.font
-                    selectedTextSize = item.size
-                    selectedTextColorHex = item.colorHex
-                    textDragOffset = item.offset
-                    textDragBase = item.offset
-                    textScale = item.scale
-                    textScaleBase = item.scale
-                    textRotation = item.rotation
-                    textRotationBase = item.rotation
-                    confirmedTextItems.removeAll { $0.id == item.id }
-                    showTextEditor = true
-                    textFieldFocused = true
-                }
-                .allowsHitTesting(!showTypePopup && !showTextEditor && !showStickerPanel)
-                .zIndex(16)
-            }
-
             // ── 텍스트 편집 floating done 버튼 (dim 위) ──
             if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
                 VStack {
@@ -372,7 +411,8 @@ struct SelectDesignScreen: View {
                         Spacer()
                         Button {
                             if !textInput.isEmpty {
-                                confirmedTextItems.append(CassetteTextLayer(
+                                let saved = CassetteTextLayer(
+                                    id: editingLayerID ?? UUID(),
                                     text: textInput,
                                     font: selectedFont,
                                     size: selectedTextSize,
@@ -380,7 +420,14 @@ struct SelectDesignScreen: View {
                                     offset: textDragOffset,
                                     scale: textScale,
                                     rotation: textRotation
-                                ))
+                                )
+                                confirmedTextItems.append(saved)
+                                if let zPos = editingLayerZPos {
+                                    orderedLayerIDs.insert(saved.id, at: min(zPos, orderedLayerIDs.count))
+                                } else {
+                                    orderedLayerIDs.append(saved.id)
+                                }
+                                if !textCreationOrder.contains(saved.id) { textCreationOrder.append(saved.id) }
                             }
                             textInput = ""
                             textDragOffset = CGSize(width: 0, height: 30)
@@ -390,6 +437,7 @@ struct SelectDesignScreen: View {
                             textRotation = .zero
                             textRotationBase = .zero
                             editingLayerID = nil
+                            editingLayerZPos = nil
                             showTextEditor = false
                             textFieldFocused = false
                         } label: {
@@ -506,9 +554,16 @@ struct SelectDesignScreen: View {
                     onDone: {
                         if let layer = previewImageLayer {
                             confirmedImageItems.append(layer)
+                            if let zPos = editingLayerZPos {
+                                orderedLayerIDs.insert(layer.id, at: min(zPos, orderedLayerIDs.count))
+                            } else {
+                                orderedLayerIDs.append(layer.id)
+                            }
+                            if !imageCreationOrder.contains(layer.id) { imageCreationOrder.append(layer.id) }
                         }
                         previewImageLayer = nil
                         selectedStickerPhoto = nil
+                        editingLayerZPos = nil
                         withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
                     }
                 )
@@ -581,7 +636,8 @@ struct SelectDesignScreen: View {
             // enter 등으로 키보드가 닫히면 텍스트 편집 종료 (텍스트 저장)
             if showTextEditor {
                 if !textInput.isEmpty {
-                    confirmedTextItems.append(CassetteTextLayer(
+                    let saved = CassetteTextLayer(
+                        id: editingLayerID ?? UUID(),
                         text: textInput,
                         font: selectedFont,
                         size: selectedTextSize,
@@ -589,7 +645,14 @@ struct SelectDesignScreen: View {
                         offset: textDragOffset,
                         scale: textScale,
                         rotation: textRotation
-                    ))
+                    )
+                    confirmedTextItems.append(saved)
+                    if let zPos = editingLayerZPos {
+                        orderedLayerIDs.insert(saved.id, at: min(zPos, orderedLayerIDs.count))
+                    } else {
+                        orderedLayerIDs.append(saved.id)
+                    }
+                    if !textCreationOrder.contains(saved.id) { textCreationOrder.append(saved.id) }
                 }
                 textInput = ""
                 textDragOffset = CGSize(width: 0, height: 30)
@@ -599,12 +662,40 @@ struct SelectDesignScreen: View {
                 textRotation = .zero
                 textRotationBase = .zero
                 editingLayerID = nil
+                editingLayerZPos = nil
                 showTextEditor = false
             }
         }
         .onChange(of: stickerStyle) { previewImageLayer?.maskStyle = stickerStyle }
+        .onAppear {
+            if !isDesignRestored {
+                confirmedImageItems = cassetteData.draftImageLayers
+                confirmedTextItems = cassetteData.draftTextLayers
+                orderedLayerIDs = cassetteData.draftOrderedLayerIDs
+                imageCreationOrder = cassetteData.draftImageCreationOrder
+                textCreationOrder = cassetteData.draftTextCreationOrder
+                // orderedLayerIDs가 없으면 기존 draft 순서 기반으로 재구성
+                if orderedLayerIDs.isEmpty {
+                    orderedLayerIDs = confirmedImageItems.map(\.id) + confirmedTextItems.map(\.id)
+                    imageCreationOrder = confirmedImageItems.map(\.id)
+                    textCreationOrder = confirmedTextItems.map(\.id)
+                }
+                isDesignRestored = true
+            }
+        }
+        .onDisappear {
+            cassetteData.draftImageLayers = confirmedImageItems
+            cassetteData.draftTextLayers = confirmedTextItems
+            cassetteData.draftOrderedLayerIDs = orderedLayerIDs
+            cassetteData.draftImageCreationOrder = imageCreationOrder
+            cassetteData.draftTextCreationOrder = textCreationOrder
+        }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
-            Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
+            Button("leave", role: .destructive) {
+                cassetteData.draftImageLayers = []
+                cassetteData.draftTextLayers = []
+                cassetteData.shouldDismiss = true
+            }
             Button("cancel", role: .cancel) { }
         } message: {
             Text("Your cassette won't be saved.")
@@ -623,7 +714,7 @@ struct SelectDesignScreen: View {
                 Image(icon)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 32, height: 32)
+                    .frame(width: 40, height: 40)
             }
         }
     }
@@ -815,19 +906,16 @@ struct CassetteSelectPanel: View {
     var onDone: (() -> Void)? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .bottom) {
+        VStack(alignment: .center, spacing: 0) {
             // drag indicator
-            Capsule()
-                .fill(Color.appGray.opacity(0.4))
-                .frame(width: 36, height: 4)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
 
             // ── 타이틀 ──
             Text("cassette type")
                 .font(.appBody)
                 .foregroundColor(.appBlack)
                 .padding(.bottom, 16)
+                .padding(.top, 16)
 
             // ── 카세트 타입 선택 (가로 스크롤) ──
             ScrollView(.horizontal, showsIndicators: false) {
@@ -899,18 +987,22 @@ struct CassetteSelectPanel: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
 
-            // ── done ──
-            Button {
-                onDone?()
-            } label: {
-                Text("done")
-                    .font(.appBody)
-                    .foregroundColor(.appWhite)
-                    .frame(width: 201, height: 48)
-                    .background(Capsule().fill(Color.appDarkGray))
-            }
-            .padding(.bottom, 11)
+            Spacer()
         }
+
+        // ── done 버튼 floating ──
+        Button {
+            onDone?()
+        } label: {
+            Text("done")
+                .font(.appBody)
+                .foregroundColor(.appWhite)
+                .frame(width: 201, height: 48)
+                .background(Capsule().fill(Color.appDarkGray))
+        }
+        .padding(.bottom, 11)
+
+        } // ZStack
         .frame(height: 387)
         .clipped()
         .background(
@@ -1556,5 +1648,174 @@ extension UIImage {
         )
         guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
         return UIImage(cgImage: cropped)
+    }
+}
+
+// MARK: - LayerPanelView
+
+struct LayerPanelView: View {
+    @Binding var orderedLayerIDs: [UUID]
+    @Binding var confirmedImageItems: [CassetteImageLayer]
+    @Binding var confirmedTextItems: [CassetteTextLayer]
+    let imageCreationOrder: [UUID]
+    let textCreationOrder: [UUID]
+    var onDeleteLayer: (UUID) -> Void
+
+    @State private var draggedID: UUID? = nil
+    @State private var dragStartIndex: Int? = nil
+    @State private var lastDragOffset: CGFloat = 0
+
+    private enum LayerInfo {
+        case image(n: Int, thumb: UIImage?)
+        case text(n: Int, content: String)
+        case unknown
+    }
+
+    private func layerInfo(for id: UUID) -> LayerInfo {
+        if let idx = imageCreationOrder.firstIndex(of: id) {
+            let thumb = confirmedImageItems.first(where: { $0.id == id })?.loadedImage
+            return .image(n: idx + 1, thumb: thumb)
+        } else if let idx = textCreationOrder.firstIndex(of: id) {
+            let content = confirmedTextItems.first(where: { $0.id == id })?.text ?? ""
+            return .text(n: idx + 1, content: content)
+        }
+        return .unknown
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("• layers")
+                .font(.appBody)
+                .foregroundColor(.appBlack)
+                .padding(.bottom, 20)
+
+            // 레이어 목록 + cassette background — 최대 5행 스크롤
+            let reversedIDs = Array(orderedLayerIDs.reversed())
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    ForEach(reversedIDs, id: \.self) { id in
+                        layerRow(id: id, isBackground: false)
+                        Rectangle()
+                            .fill(Color(hex: "B3B3B3"))
+                            .frame(height: 1)
+                            .padding(.vertical, 12)
+                    }
+                    backgroundRow
+                }
+            }
+            .frame(height: 212)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    @ViewBuilder
+    private func layerRow(id: UUID, isBackground: Bool) -> some View {
+        let isDragging = draggedID == id
+        HStack(spacing: 0) {
+            // 핸들
+            Image("button_handle")
+                .resizable()
+                .frame(width: 16, height: 16)
+                .opacity(isBackground ? 0.3 : 1)
+                .gesture(
+                    DragGesture(minimumDistance: 4, coordinateSpace: .global)
+                        .onChanged { v in
+                            if draggedID != id {
+                                draggedID = id
+                                dragStartIndex = orderedLayerIDs.firstIndex(of: id)
+                                lastDragOffset = 0
+                            }
+                            // 행 높이 약 44pt 기준으로 인덱스 이동
+                            let rowHeight: CGFloat = 44
+                            let dy = v.translation.height - lastDragOffset
+                            if abs(dy) > rowHeight {
+                                let dir = dy > 0 ? -1 : 1  // panel은 reversed 표시이므로 반전
+                                if let fromIdx = orderedLayerIDs.firstIndex(of: id) {
+                                    let toIdx = fromIdx + dir
+                                    if toIdx >= 0 && toIdx < orderedLayerIDs.count {
+                                        orderedLayerIDs.move(fromOffsets: IndexSet(integer: fromIdx), toOffset: dir > 0 ? toIdx + 1 : toIdx)
+                                        lastDragOffset = v.translation.height
+                                    }
+                                }
+                            }
+                        }
+                        .onEnded { _ in
+                            draggedID = nil
+                            dragStartIndex = nil
+                            lastDragOffset = 0
+                        }
+                )
+
+            Spacer().frame(width: 12)
+
+            // 레이어 타입별 콘텐츠
+            switch layerInfo(for: id) {
+            case .image(let n, let thumb):
+                Text("image \(n)")
+                    .font(.appBody)
+                    .foregroundColor(.appBlack)
+                    .lineLimit(1)
+                    .padding(.trailing, 8)
+                if let img = thumb {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 54, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
+            case .text(let n, let content):
+                Text("text \(n)")
+                    .font(.appBody)
+                    .foregroundColor(.appBlack)
+                    .lineLimit(1)
+                    .padding(.trailing, 8)
+                Text("\"\(content)\"")
+                    .font(.appBody)
+                    .foregroundColor(.appDarkGray)
+                    .lineLimit(1)
+            case .unknown:
+                Text("layer")
+                    .font(.appBody)
+                    .foregroundColor(.appBlack)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // X 버튼
+            Button {
+                onDeleteLayer(id)
+            } label: {
+                Image("button_x")
+                    .resizable()
+                    .frame(width: 16, height: 16)
+            }
+            .opacity(isBackground ? 0.3 : 1)
+            .disabled(isBackground)
+        }
+        .opacity(isDragging ? 0.4 : 1)
+    }
+
+    private var backgroundRow: some View {
+        HStack(spacing: 0) {
+            Image("button_handle")
+                .resizable()
+                .frame(width: 16, height: 16)
+                .opacity(0.3)
+
+            Spacer().frame(width: 12)
+
+            Text("cassette background")
+                .font(.appBody)
+                .foregroundColor(.appBlack)
+
+            Spacer()
+
+            Image("button_x")
+                .resizable()
+                .frame(width: 16, height: 16)
+                .opacity(0.3)
+        }
+        .opacity(0.3)
     }
 }

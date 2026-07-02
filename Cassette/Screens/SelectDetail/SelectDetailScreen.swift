@@ -47,6 +47,11 @@ struct SelectDetailScreen: View {
             HStack {
                 Button {
                     cassetteData.resetForReselection()
+                    cassetteData.draftImageLayers = []
+                    cassetteData.draftTextLayers = []
+                    cassetteData.draftOrderedLayerIDs = []
+                    cassetteData.draftImageCreationOrder = []
+                    cassetteData.draftTextCreationOrder = []
                     dismiss()
                 } label: {
                     Image("button_chevronLeft")
