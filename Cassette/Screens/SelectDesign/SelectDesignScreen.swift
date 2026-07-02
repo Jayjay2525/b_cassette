@@ -481,7 +481,7 @@ struct SelectDesignScreen: View {
                     photos: cassetteData.selectedPhotos,
                     onSelect: { photo in
                         if let photo {
-                            previewImageLayer = CassetteImageLayer(photo: photo)
+                            previewImageLayer = CassetteImageLayer(photo: photo, maskStyle: stickerStyle)
                         } else {
                             previewImageLayer = nil
                         }
@@ -590,6 +590,7 @@ struct SelectDesignScreen: View {
                 showTextEditor = false
             }
         }
+        .onChange(of: stickerStyle) { previewImageLayer?.maskStyle = stickerStyle }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
@@ -719,17 +720,44 @@ struct CassetteCanvasView: View {
             Image("cassette_\(colorName)").resizable().scaledToFit()
             Image("bolts").resizable().scaledToFit()
 
-            // ── 이미지 레이어 ──
+            // ── 이미지 레이어 (스타일별 mask) ──
             let s = width / baseWidth
-            ForEach(imageLayers) { item in
-                if let img = item.loadedImage {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120 * s, height: 120 * s)
-                        .scaleEffect(item.scale)
-                        .rotationEffect(item.rotation)
-                        .offset(x: item.offset.width * s, y: item.offset.height * s)
+            let bgImages = imageLayers.filter { $0.maskStyle == .background }
+            let fgImages = imageLayers.filter { $0.maskStyle == .foreground }
+            if !bgImages.isEmpty {
+                ZStack {
+                    ForEach(bgImages) { item in
+                        if let img = item.loadedImage {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120 * s, height: 120 * s)
+                                .scaleEffect(item.scale)
+                                .rotationEffect(item.rotation)
+                                .offset(x: item.offset.width * s, y: item.offset.height * s)
+                        }
+                    }
+                }
+                .mask {
+                    Image("cassette_mask_outside").resizable().scaledToFit()
+                }
+            }
+            if !fgImages.isEmpty {
+                ZStack {
+                    ForEach(fgImages) { item in
+                        if let img = item.loadedImage {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120 * s, height: 120 * s)
+                                .scaleEffect(item.scale)
+                                .rotationEffect(item.rotation)
+                                .offset(x: item.offset.width * s, y: item.offset.height * s)
+                        }
+                    }
+                }
+                .mask {
+                    Image("cassette_mask_center").resizable().scaledToFit()
                 }
             }
 
@@ -1232,6 +1260,7 @@ struct TextSizeSlider: View {
 struct CassetteImageLayer: Identifiable {
     let id = UUID()
     var photo: BCutPhoto
+    var maskStyle: StickerStyle = .background
     var offset: CGSize = .zero
     var scale: CGFloat = 1.0
     var rotation: Angle = .zero
@@ -1268,6 +1297,14 @@ struct ConfirmedImageLayerView: View {
             x: cassetteFrame.midX + item.offset.width + dragDelta.width,
             y: cassetteFrame.midY + item.offset.height + dragDelta.height
         )
+        .mask {
+            let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
+            Image(maskName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+        }
         .gesture(
             DragGesture(minimumDistance: 4)
                 .updating($dragDelta) { v, state, _ in state = v.translation }
