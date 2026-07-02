@@ -231,6 +231,7 @@ struct MainScreen: View {
                         selectedCassette = nil
                     }
                 } else if count > oldCount, let newest = appState.cassettes.last {
+                    rotationIndex = appState.cassettes.count - 1
                     withAnimation(.easeInOut(duration: 0.25)) {
                         selectedCassette = newest
                         circleActive = true
