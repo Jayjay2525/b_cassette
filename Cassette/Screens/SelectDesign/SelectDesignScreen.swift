@@ -311,7 +311,7 @@ struct SelectDesignScreen: View {
                     stickerStyle = tapped.maskStyle
                     withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
                 }
-                .allowsHitTesting(!showTypePopup && !showStickerPanel)
+                .allowsHitTesting(!showTypePopup && !showStickerPanel && !showTextEditor)
                 .zIndex(15)
             }
 
