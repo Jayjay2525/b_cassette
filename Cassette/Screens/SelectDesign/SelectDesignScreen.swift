@@ -302,9 +302,17 @@ struct SelectDesignScreen: View {
 
             // ── 이미지 레이어들 (드래그/핀치/회전 가능) ──
             ForEach($confirmedImageItems) { $item in
-                ConfirmedImageLayerView(item: $item, cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
-                    .allowsHitTesting(!showTypePopup)
-                    .zIndex(15)
+                ConfirmedImageLayerView(item: $item, cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID) {
+                    // 탭 → 해당 레이어를 다시 편집 모드로
+                    let tapped = item
+                    confirmedImageItems.removeAll { $0.id == tapped.id }
+                    previewImageLayer = tapped
+                    selectedStickerPhoto = tapped.photo
+                    stickerStyle = tapped.maskStyle
+                    withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
+                }
+                .allowsHitTesting(!showTypePopup && !showStickerPanel)
+                .zIndex(15)
             }
 
             // ── 스티커 프리뷰 레이어 (선택 즉시 표시, done 전) ──
@@ -352,7 +360,7 @@ struct SelectDesignScreen: View {
                     showTextEditor = true
                     textFieldFocused = true
                 }
-                .allowsHitTesting(!showTypePopup && !showTextEditor)
+                .allowsHitTesting(!showTypePopup && !showTextEditor && !showStickerPanel)
                 .zIndex(16)
             }
 
@@ -1276,6 +1284,7 @@ struct ConfirmedImageLayerView: View {
     @Binding var item: CassetteImageLayer
     let cassetteFrame: CGRect
     @Binding var activeLayerID: UUID?
+    var onTap: (() -> Void)? = nil
 
     @GestureState private var dragDelta: CGSize = .zero
     @GestureState private var magnifyDelta: CGFloat = 1.0
@@ -1343,6 +1352,7 @@ struct ConfirmedImageLayerView: View {
                 if activeLayerID == item.id { activeLayerID = nil }
             }
         }
+        .onTapGesture { onTap?() }
         .onAppear { loadImage() }
     }
 
