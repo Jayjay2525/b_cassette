@@ -75,8 +75,8 @@ struct SelectBCutsScreen: View {
                 } else {
                     ScrollView(showsIndicators: false) {
                         LazyVGrid(
-                            columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 3),
-                            spacing: 2
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3),
+                            spacing: 4
                         ) {
                             ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { idx, asset in
                                 let selected = isBCutSelected(asset)
@@ -426,6 +426,7 @@ struct GridPhotoCell: View {
             )
             .clipped()
             .contentShape(Rectangle())
+            .overlay(RoundedRectangle(cornerRadius: 0).strokeBorder(Color.appBlack, lineWidth: isSelected ? 1 : 0))
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     ZStack {
@@ -476,6 +477,7 @@ struct BCutPhotoCard: View {
             }
             .frame(width: width, height: cardHeight)
             .clipped()
+            .overlay(RoundedRectangle(cornerRadius: 0).strokeBorder(Color.appBlack, lineWidth: isSelected ? 1 : 0))
 
             if isSelected {
                 ZStack {
