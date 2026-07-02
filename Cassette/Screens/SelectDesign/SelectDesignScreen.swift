@@ -81,6 +81,7 @@ struct SelectDesignScreen: View {
     @State private var selectedStickerPhoto: BCutPhoto? = nil
     @State private var previewImageLayer: CassetteImageLayer? = nil
     @State private var confirmedImageItems: [CassetteImageLayer] = []
+    @State private var activeImageLayerID: UUID? = nil
 
     // ── Text 편집 ──
     @State private var showTextEditor = false
@@ -187,9 +188,11 @@ struct SelectDesignScreen: View {
                 .background(
                     GeometryReader { geo in
                         Color.clear.onAppear {
-                            cassetteFrame = geo.frame(in: .named("outerZStack"))
+                            let f = geo.frame(in: .named("outerZStack"))
+                            if f.width > 0 { cassetteFrame = f }
                         }.onChange(of: geo.frame(in: .named("outerZStack"))) {
-                            cassetteFrame = geo.frame(in: .named("outerZStack"))
+                            let f = geo.frame(in: .named("outerZStack"))
+                            if f.width > 0 { cassetteFrame = f }
                         }
                     }
                 )
@@ -274,7 +277,7 @@ struct SelectDesignScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(true)
                 .transition(.opacity)
-                .zIndex(11)
+                .zIndex(20)
             }
 
             // ── 카세트 패널 (인라인, 어두운 오버레이 없음) ──
@@ -299,7 +302,7 @@ struct SelectDesignScreen: View {
 
             // ── 이미지 레이어들 (드래그/핀치/회전 가능) ──
             ForEach($confirmedImageItems) { $item in
-                ConfirmedImageLayerView(item: $item, cassetteFrame: cassetteFrame)
+                ConfirmedImageLayerView(item: $item, cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
                     .allowsHitTesting(!showTypePopup)
                     .zIndex(15)
             }
@@ -309,7 +312,7 @@ struct SelectDesignScreen: View {
                 ConfirmedImageLayerView(item: Binding(
                     get: { previewImageLayer! },
                     set: { previewImageLayer = $0 }
-                ), cassetteFrame: cassetteFrame)
+                ), cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
                 .id(previewImageLayer?.id)
                 .allowsHitTesting(!showTypePopup)
                 .zIndex(15)
@@ -501,7 +504,7 @@ struct SelectDesignScreen: View {
                     }
                 )
                 .transition(.move(edge: .bottom))
-                .zIndex(10)
+                .zIndex(20)
 
             }
 
@@ -1272,11 +1275,16 @@ struct CassetteImageLayer: Identifiable {
 struct ConfirmedImageLayerView: View {
     @Binding var item: CassetteImageLayer
     let cassetteFrame: CGRect
+    @Binding var activeLayerID: UUID?
 
     @GestureState private var dragDelta: CGSize = .zero
     @GestureState private var magnifyDelta: CGFloat = 1.0
     @GestureState private var rotateDelta: Angle = .zero
     @State private var image: UIImage? = nil
+
+    private var isGestureActive: Bool {
+        dragDelta != .zero || magnifyDelta != 1.0 || rotateDelta.radians != 0
+    }
 
     var body: some View {
         Group {
@@ -1298,13 +1306,18 @@ struct ConfirmedImageLayerView: View {
             y: cassetteFrame.midY + item.offset.height + dragDelta.height
         )
         .mask {
-            let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
-            Image(maskName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: cassetteFrame.width, height: cassetteFrame.height)
-                .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+            if cassetteFrame.width > 0 {
+                let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
+                Image(maskName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                    .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+            } else {
+                Color.white
+            }
         }
+        .allowsHitTesting(activeLayerID == nil || activeLayerID == item.id)
         .gesture(
             DragGesture(minimumDistance: 4)
                 .updating($dragDelta) { v, state, _ in state = v.translation }
@@ -1323,6 +1336,13 @@ struct ConfirmedImageLayerView: View {
                 .updating($rotateDelta) { v, state, _ in state = v }
                 .onEnded { v in item.rotation += v }
         )
+        .onChange(of: isGestureActive) { _, active in
+            if active {
+                if activeLayerID == nil { activeLayerID = item.id }
+            } else {
+                if activeLayerID == item.id { activeLayerID = nil }
+            }
+        }
         .onAppear { loadImage() }
     }
 
