@@ -88,8 +88,8 @@ struct SelectDesignScreen: View {
     @State private var textInput = ""
     @State private var selectedTextTab: TextEditTab = .font
     @State private var selectedFont: CassetteFont = .inspiration
-    @State private var selectedTextSize: CGFloat = 24
-    @State private var selectedTextColorHex: String = "FFFFFF"
+    @State private var selectedTextSize: CGFloat = 35
+    @State private var selectedTextColorHex: String = "000000"
     @State private var colorFromPicker = false
     @State private var keyboardHeight: CGFloat = 0
     @State private var textDragOffset: CGSize = CGSize(width: 0, height: 30)
@@ -199,9 +199,11 @@ struct SelectDesignScreen: View {
 
 
                 Spacer()
+            }
 
-                // ── 하단 3개 버튼 ──
-                if showTextEditor { Spacer().frame(height: 16) }
+            // ── 하단 툴 버튼 + done (이미지 레이어보다 위) ──
+            VStack {
+                Spacer()
                 HStack(spacing: 24) {
                     Spacer()
                     if !showTextEditor {
@@ -219,9 +221,6 @@ struct SelectDesignScreen: View {
                     Spacer()
                 }
                 .padding(.bottom, 16)
-
-                // ── Done 버튼 (텍스트 모드일때 숨김) ──
-                if showTextEditor { Spacer().frame(height: 59) }
                 Button {
                     guard !isSaving else { return }
                     isSaving = true
@@ -246,7 +245,9 @@ struct SelectDesignScreen: View {
                 }
                 .padding(.bottom, 11)
                 .opacity(showTextEditor || showStickerPanel ? 0 : 1)
+                .allowsHitTesting(!showTextEditor && !showStickerPanel)
             }
+            .zIndex(17)
 
             // ── 패널 열려있을 때 뒤쪽 탭으로 닫기 ──
             if showCassettePanel || showStickerPanel {
@@ -673,7 +674,7 @@ struct SelectDesignScreen: View {
         let renderView = CassetteCanvasView(
             colorName: cassetteData.selectedCassetteColor,
             width: renderWidth,
-            applyMask: true,
+            applyMask: false,
             textLayers: confirmedTextItems,
             imageLayers: confirmedImageItems
         )
@@ -749,6 +750,7 @@ struct CassetteCanvasView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .mask {
                     Image("cassette_mask_outside").resizable().scaledToFit()
                 }
@@ -767,6 +769,7 @@ struct CassetteCanvasView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .mask {
                     Image("cassette_mask_center").resizable().scaledToFit()
                 }
@@ -1114,7 +1117,7 @@ struct TextEditorToolbar: View {
     var onPickerTap: () -> Void = {}
 
     private let textColorHexes: [String] = [
-        "FFFFFF", "000000",
+        "000000", "FFFFFF",
         "FF0000", "FF7C00", "FFC500",
         "00C50D", "009CFF", "C300C8",
         "333333", "555555", "777777", "999999"
@@ -1159,6 +1162,11 @@ struct TextEditorToolbar: View {
                                 }
                                 .overlay(Circle().strokeBorder(Color.black, lineWidth: colorFromPicker ? 1 : 0))
                             }
+
+                            Rectangle()
+                                .fill(Color.white.opacity(0.4))
+                                .frame(width: 1, height: 23)
+                                .padding(.horizontal, 4)
 
                             ForEach(Array(textColorHexes.enumerated()), id: \.offset) { i, hex in
                                 colorChip(hex, index: i)
@@ -1215,13 +1223,13 @@ struct TextEditorToolbar: View {
     @ViewBuilder
     private func colorChip(_ hex: String, index: Int) -> some View {
         let isSelected = selectedColorHex.uppercased() == hex.uppercased() && !colorFromPicker
-        let isWhite = index == 0
+        let isBlack = index == 0
+        let strokeColor: Color = isBlack ? .white : .black
         Button { selectedColorHex = hex; colorFromPicker = false } label: {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(hex: hex))
                 .frame(width: 36, height: 36)
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(hex: "CCCCCC"), lineWidth: isWhite ? 1 : 0))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.black, lineWidth: isSelected ? 1 : 0))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(strokeColor, lineWidth: isSelected ? 1 : 0))
         }
     }
 }
