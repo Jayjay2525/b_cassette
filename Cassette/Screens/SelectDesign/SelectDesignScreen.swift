@@ -226,12 +226,47 @@ struct SelectDesignScreen: View {
                         confirmedImageItems: $confirmedImageItems,
                         confirmedTextItems: $confirmedTextItems,
                         imageCreationOrder: imageCreationOrder,
-                        textCreationOrder: textCreationOrder
-                    ) { id in
-                        confirmedImageItems.removeAll { $0.id == id }
-                        confirmedTextItems.removeAll { $0.id == id }
-                        orderedLayerIDs.removeAll { $0 == id }
-                    }
+                        textCreationOrder: textCreationOrder,
+                        cassetteColorName: cassetteData.selectedCassetteColor,
+                        onDeleteLayer: { id in
+                            confirmedImageItems.removeAll { $0.id == id }
+                            confirmedTextItems.removeAll { $0.id == id }
+                            orderedLayerIDs.removeAll { $0 == id }
+                        },
+                        onTapBackground: {
+                            withAnimation(.easeInOut(duration: 0.25)) { showCassettePanel = true }
+                        },
+                        onTapLayer: { id in
+                            if let idx = confirmedImageItems.firstIndex(where: { $0.id == id }) {
+                                let tapped = confirmedImageItems[idx]
+                                editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
+                                confirmedImageItems.remove(at: idx)
+                                orderedLayerIDs.removeAll { $0 == tapped.id }
+                                previewImageLayer = tapped
+                                selectedStickerPhoto = tapped.photo
+                                stickerStyle = tapped.maskStyle
+                                withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
+                            } else if let idx = confirmedTextItems.firstIndex(where: { $0.id == id }) {
+                                let tapped = confirmedTextItems[idx]
+                                editingLayerID = tapped.id
+                                editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
+                                textInput = tapped.text
+                                selectedFont = tapped.font
+                                selectedTextSize = tapped.size
+                                selectedTextColorHex = tapped.colorHex
+                                textDragOffset = tapped.offset
+                                textDragBase = tapped.offset
+                                textScale = tapped.scale
+                                textScaleBase = tapped.scale
+                                textRotation = tapped.rotation
+                                textRotationBase = tapped.rotation
+                                confirmedTextItems.remove(at: idx)
+                                orderedLayerIDs.removeAll { $0 == tapped.id }
+                                showTextEditor = true
+                                textFieldFocused = true
+                            }
+                        }
+                    )
                     Spacer()
                 }
                 .zIndex(17)
@@ -725,7 +760,7 @@ struct SelectDesignScreen: View {
         Button { stickerStyle = style } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                    .fill(isSelected ? Color.white : Color.appGray)
                     .frame(width: 55, height: 40)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -1006,7 +1041,7 @@ struct CassetteSelectPanel: View {
         .frame(height: 387)
         .clipped()
         .background(
-            Color(hex: "F7F7F7")
+            Color.appLightGray
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: 16,
                     bottomLeadingRadius: 0,
@@ -1128,7 +1163,7 @@ struct StickerEditPanel: View {
         Button { selectedTab = tab } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                    .fill(isSelected ? Color.white : Color.appGray)
                     .frame(width: 72, height: 40)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -1283,7 +1318,7 @@ struct TextEditorToolbar: View {
                 .frame(width: 72, height: 40)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                        .fill(isSelected ? Color.white : Color.appGray)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -1303,7 +1338,7 @@ struct TextEditorToolbar: View {
                 .frame(height: 40)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.white : Color(hex: "B3B3B3"))
+                        .fill(isSelected ? Color.white : Color.appGray)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -1457,6 +1492,11 @@ struct ConfirmedImageLayerView: View {
     }
 
     func loadImage() {
+        // 이미 캐시된 이미지 있으면 즉시 사용 (재렌더 시 깜빡임 방지)
+        if let cached = item.loadedImage {
+            image = cached
+            return
+        }
         if case .file(let url) = item.photo.imageSource,
            let img = UIImage(contentsOfFile: url.path) {
             image = img
@@ -1659,7 +1699,10 @@ struct LayerPanelView: View {
     @Binding var confirmedTextItems: [CassetteTextLayer]
     let imageCreationOrder: [UUID]
     let textCreationOrder: [UUID]
+    let cassetteColorName: String
     var onDeleteLayer: (UUID) -> Void
+    var onTapBackground: () -> Void
+    var onTapLayer: (UUID) -> Void
 
     @State private var draggedID: UUID? = nil
     @State private var dragStartIndex: Int? = nil
@@ -1696,7 +1739,7 @@ struct LayerPanelView: View {
                     ForEach(reversedIDs, id: \.self) { id in
                         layerRow(id: id, isBackground: false)
                         Rectangle()
-                            .fill(Color(hex: "B3B3B3"))
+                            .fill(Color.appGray)
                             .frame(height: 1)
                             .padding(.vertical, 12)
                     }
@@ -1793,6 +1836,8 @@ struct LayerPanelView: View {
             .opacity(isBackground ? 0.3 : 1)
             .disabled(isBackground)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { onTapLayer(id) }
         .opacity(isDragging ? 0.4 : 1)
     }
 
@@ -1808,6 +1853,14 @@ struct LayerPanelView: View {
             Text("cassette background")
                 .font(.appBody)
                 .foregroundColor(.appBlack)
+                .padding(.trailing, 8)
+
+            if let color = cassetteColors.first(where: { $0.name == cassetteColorName }) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(color.color)
+                    .frame(width: 18, height: 18)
+                    .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Color.appGray.opacity(0.4), lineWidth: 0.5))
+            }
 
             Spacer()
 
@@ -1816,6 +1869,7 @@ struct LayerPanelView: View {
                 .frame(width: 16, height: 16)
                 .opacity(0.3)
         }
-        .opacity(0.3)
+        .contentShape(Rectangle())
+        .onTapGesture { onTapBackground() }
     }
 }

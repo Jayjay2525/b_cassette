@@ -186,7 +186,7 @@ struct SelectBCutsScreen: View {
                     .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(width: 201, height: 48)
-                    .background(Capsule().fill(isDisabled ? Color(hex: "#B3B3B3") : Color.appDarkGray))
+                    .background(Capsule().fill(isDisabled ? Color.appGray : Color.appDarkGray))
             }
             Spacer()
 
