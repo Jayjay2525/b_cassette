@@ -439,6 +439,18 @@ struct SelectDesignScreen: View {
                 .zIndex(15)
             }
 
+            // ── 카세트 표면 굴곡 쉐이딩 오버레이 ──
+            if cassetteFrame.width > 0 {
+                Image("cassette_multiply")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                    .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                    .blendMode(.plusDarker)
+                    .allowsHitTesting(false)
+                    .zIndex(16)
+            }
+
             // ── 텍스트 편집 floating done 버튼 (dim 위) ──
             if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
                 VStack {
