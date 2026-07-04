@@ -426,6 +426,7 @@ struct GridPhotoCell: View {
             )
             .clipped()
             .contentShape(Rectangle())
+            .overlay(isSelected ? Color.black.opacity(0.15) : Color.clear)
             .overlay(RoundedRectangle(cornerRadius: 0).strokeBorder(Color.appBlack, lineWidth: isSelected ? 1 : 0))
             .overlay(alignment: .topTrailing) {
                 if isSelected {
@@ -477,6 +478,7 @@ struct BCutPhotoCard: View {
             }
             .frame(width: width, height: cardHeight)
             .clipped()
+            .overlay(isSelected ? Color.black.opacity(0.15) : Color.clear)
             .overlay(RoundedRectangle(cornerRadius: 0).strokeBorder(Color.appBlack, lineWidth: isSelected ? 1 : 0))
 
             if isSelected {

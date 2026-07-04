@@ -1,12 +1,10 @@
 import SwiftUI
-import Combine
 import Lottie
 
 struct CassetteLoadingOverlay: View {
     let progress: Double
 
     @State private var dotCount = 0
-    private let dotTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -20,7 +18,7 @@ struct CassetteLoadingOverlay: View {
                     .frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
                     .padding(.bottom, 48)
 
-                Text("making your cassette\(String(repeating: ".", count: dotCount + 1))")
+                Text("winding your tape\(String(repeating: ".", count: dotCount + 1))")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .multilineTextAlignment(.center)
@@ -41,6 +39,11 @@ struct CassetteLoadingOverlay: View {
                 Spacer().frame(height: 11)
             }
         }
-        .onReceive(dotTimer) { _ in dotCount = (dotCount + 1) % 3 }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                dotCount = (dotCount + 1) % 3
+            }
+        }
     }
 }

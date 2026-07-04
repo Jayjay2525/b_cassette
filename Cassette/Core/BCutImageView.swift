@@ -42,6 +42,8 @@ struct BCutImageView: View {
                 guard let data = try? Data(contentsOf: url), let ui = UIImage(data: data) else { return }
                 DispatchQueue.main.async { image = ui }
             }
+        case .bundleAsset(let name):
+            if let img = UIImage(named: name) { image = img }
         }
     }
 }

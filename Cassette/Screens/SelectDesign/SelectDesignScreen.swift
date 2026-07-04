@@ -90,6 +90,8 @@ struct SelectDesignScreen: View {
     @State private var stickerTab: StickerTab = .image
     @State private var stickerStyle: StickerStyle = .background
     @State private var selectedStickerPhoto: BCutPhoto? = nil
+    @State private var selectedStickerName: String? = nil
+    @State private var selectedLabelName: String? = nil
     @State private var previewImageLayer: CassetteImageLayer? = nil
     @State private var confirmedImageItems: [CassetteImageLayer] = []
     @State private var isDesignRestored: Bool = false
@@ -245,31 +247,22 @@ struct SelectDesignScreen: View {
                                 previewImageLayer = tapped
                                 selectedStickerPhoto = tapped.photo
                                 stickerStyle = tapped.maskStyle
+                                if tapped.isLabel {
+                                    stickerTab = .label
+                                } else if case .bundleAsset = tapped.photo.imageSource {
+                                    stickerTab = .sticker
+                                } else {
+                                    stickerTab = .image
+                                }
                                 withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
                             } else if let idx = confirmedTextItems.firstIndex(where: { $0.id == id }) {
-                                let tapped = confirmedTextItems[idx]
-                                editingLayerID = tapped.id
-                                editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
-                                textInput = tapped.text
-                                selectedFont = tapped.font
-                                selectedTextSize = tapped.size
-                                selectedTextColorHex = tapped.colorHex
-                                textDragOffset = tapped.offset
-                                textDragBase = tapped.offset
-                                textScale = tapped.scale
-                                textScaleBase = tapped.scale
-                                textRotation = tapped.rotation
-                                textRotationBase = tapped.rotation
-                                confirmedTextItems.remove(at: idx)
-                                orderedLayerIDs.removeAll { $0 == tapped.id }
-                                showTextEditor = true
-                                textFieldFocused = true
+                                enterTextEdit(at: idx)
                             }
                         }
                     )
                     Spacer()
                 }
-                .zIndex(17)
+                .zIndex(18)
             }
 
             // ── 하단 툴 버튼 + done (이미지 레이어보다 위) ──
@@ -285,7 +278,7 @@ struct SelectDesignScreen: View {
                             showTextEditor = true
                             textFieldFocused = true
                         }
-                        toolButton(icon: "button_sticker") {
+                        toolButton(icon: "button_decorate") {
                             withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel.toggle() }
                         }
                     }
@@ -318,37 +311,23 @@ struct SelectDesignScreen: View {
                 .opacity(showTextEditor || showStickerPanel ? 0 : 1)
                 .allowsHitTesting(!showTextEditor && !showStickerPanel)
             }
-            .zIndex(17)
+            .zIndex(18)
 
-            // ── 패널 열려있을 때 뒤쪽 탭으로 닫기 ──
-            if showCassettePanel || showStickerPanel {
+            // ── cassette 패널 열려있을 때 뒤쪽 탭으로 닫기 ──
+            if showCassettePanel {
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .onTapGesture {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             showCassettePanel = false
-                            showStickerPanel = false
                         }
-                        // 바깥 탭으로 닫을 때 편집 중인 이미지 레이어 저장
-                        if let layer = previewImageLayer {
-                            confirmedImageItems.append(layer)
-                            if let zPos = editingLayerZPos {
-                                orderedLayerIDs.insert(layer.id, at: min(zPos, orderedLayerIDs.count))
-                            } else {
-                                orderedLayerIDs.append(layer.id)
-                            }
-                            if !imageCreationOrder.contains(layer.id) { imageCreationOrder.append(layer.id) }
-                        }
-                        previewImageLayer = nil
-                        selectedStickerPhoto = nil
-                        editingLayerZPos = nil
                     }
                     .zIndex(9)
             }
 
-            // ── 스티커 style 버튼 (dismiss 레이어 위, 패널 아래) ──
-            if showStickerPanel {
+            // ── 스티커 style 버튼 (label 탭이 아닐 때만) ──
+            if showStickerPanel && stickerTab != .label {
                 VStack {
                     Spacer()
                     HStack(spacing: 12) {
@@ -379,7 +358,7 @@ struct SelectDesignScreen: View {
             if showTextEditor && keyboardHeight > 0 && !showColorPicker && !hideDimForColorPicker {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
-                    .zIndex(17)
+                    .zIndex(18)
                     .allowsHitTesting(false)
             }
 
@@ -394,39 +373,33 @@ struct SelectDesignScreen: View {
                         previewImageLayer = tapped
                         selectedStickerPhoto = tapped.photo
                         stickerStyle = tapped.maskStyle
+                        if tapped.isLabel {
+                            stickerTab = .label
+                        } else if case .bundleAsset = tapped.photo.imageSource {
+                            stickerTab = .sticker
+                        } else {
+                            stickerTab = .image
+                        }
                         withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
                     }
                     .allowsHitTesting(!showTypePopup && !showStickerPanel && !showTextEditor)
                 } else if let idx = confirmedTextItems.firstIndex(where: { $0.id == id }) {
                     ConfirmedTextLayerView(item: $confirmedTextItems[idx], cassetteFrame: cassetteFrame) {
-                        if showTextEditor && !textInput.isEmpty {
-                            let saved = CassetteTextLayer(text: textInput, font: selectedFont, size: selectedTextSize, colorHex: selectedTextColorHex, offset: textDragOffset, scale: textScale, rotation: textRotation)
-                            confirmedTextItems.append(saved)
-                            orderedLayerIDs.append(saved.id)
-                            if !textCreationOrder.contains(saved.id) { textCreationOrder.append(saved.id) }
-                        }
-                        let tapped = confirmedTextItems[idx]
-                        editingLayerID = tapped.id
-                        editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
-                        textInput = tapped.text
-                        selectedFont = tapped.font
-                        selectedTextSize = tapped.size
-                        selectedTextColorHex = tapped.colorHex
-                        textDragOffset = tapped.offset
-                        textDragBase = tapped.offset
-                        textScale = tapped.scale
-                        textScaleBase = tapped.scale
-                        textRotation = tapped.rotation
-                        textRotationBase = tapped.rotation
-                        confirmedTextItems.remove(at: idx)
-                        orderedLayerIDs.removeAll { $0 == tapped.id }
-                        showTextEditor = true
-                        textFieldFocused = true
+                        enterTextEdit(at: idx)
                     }
                     .allowsHitTesting(!showTypePopup && !showTextEditor && !showStickerPanel)
                 }
             }
-            .zIndex(15)
+            .zIndex(14)
+
+            // ── 카세트 패널 열릴 때 프리뷰 레이어 터치 차단 ──
+            if showCassettePanel, cassetteFrame.width > 0 {
+                Color.clear
+                    .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                    .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                    .contentShape(Rectangle())
+                    .zIndex(15)
+            }
 
             // ── 스티커 프리뷰 레이어 ──
             if let _ = previewImageLayer {
@@ -436,7 +409,7 @@ struct SelectDesignScreen: View {
                 ), cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
                 .id(previewImageLayer?.id)
                 .allowsHitTesting(!showTypePopup)
-                .zIndex(15)
+                .zIndex(14)
             }
 
             // ── 카세트 표면 굴곡 쉐이딩 오버레이 ──
@@ -449,6 +422,15 @@ struct SelectDesignScreen: View {
                     .blendMode(.plusDarker)
                     .allowsHitTesting(false)
                     .zIndex(16)
+
+                // ── bolts: 모든 레이어 위에 항상 최상단 ──
+                Image("bolts")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                    .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                    .allowsHitTesting(false)
+                    .zIndex(18)
             }
 
             // ── 텍스트 편집 floating done 버튼 (dim 위) ──
@@ -505,47 +487,7 @@ struct SelectDesignScreen: View {
 
             // ── 편집 중 텍스트 레이어 (어두운 오버레이 위, zIndex 18) ──
             if showTextEditor && !showColorPicker && !hideDimForColorPicker {
-                let textColor = Color(hex: selectedTextColorHex)
-                let bodyText = textInput.isEmpty ? " " : textInput
-                (
-                    Text(bodyText).foregroundColor(textColor)
-                    + Text("|").foregroundColor(cursorVisible ? .white : .clear).font(.system(size: selectedTextSize, weight: .ultraLight))
-                )
-                .font(selectedFont.swiftUIFont(size: selectedTextSize))
-                    .padding(8)
-                    .fixedSize()
-                    .background(GeometryReader { geo in
-                        Color.clear.onAppear { editingTextSquare = max(geo.size.width, geo.size.height) }
-                            .onChange(of: geo.size) { editingTextSquare = max(geo.size.width, geo.size.height) }
-                    })
-                    .frame(minWidth: editingTextSquare, minHeight: editingTextSquare)
-                    .contentShape(Rectangle())
-                    .scaleEffect(textScale)
-                    .rotationEffect(textRotation)
-                    .position(
-                        x: cassetteFrame.midX + textDragOffset.width,
-                        y: cassetteFrame.midY + textDragOffset.height
-                    )
-                    .gesture(
-                        DragGesture()
-                            .onChanged { v in
-                                textDragOffset = CGSize(
-                                    width: textDragBase.width + v.translation.width,
-                                    height: textDragBase.height + v.translation.height
-                                )
-                            }
-                            .onEnded { _ in textDragBase = textDragOffset }
-                    )
-                    .simultaneousGesture(
-                        MagnificationGesture()
-                            .onChanged { v in textScale = textScaleBase * v }
-                            .onEnded { _ in textScaleBase = textScale }
-                    )
-                    .simultaneousGesture(
-                        RotationGesture()
-                            .onChanged { v in textRotation = textRotationBase + v }
-                            .onEnded { _ in textRotationBase = textRotation }
-                    )
+                editingTextLayerView
                     .zIndex(18)
             }
 
@@ -583,9 +525,10 @@ struct SelectDesignScreen: View {
             if showStickerPanel {
                 StickerEditPanel(
                     selectedTab: $stickerTab,
-                    selectedStyle: $stickerStyle,
                     selectedPhoto: $selectedStickerPhoto,
                     photos: cassetteData.selectedPhotos,
+                    selectedStickerName: $selectedStickerName,
+                    selectedLabelName: $selectedLabelName,
                     onSelect: { photo in
                         if let photo {
                             previewImageLayer = CassetteImageLayer(photo: photo, maskStyle: stickerStyle)
@@ -593,9 +536,29 @@ struct SelectDesignScreen: View {
                             previewImageLayer = nil
                         }
                     },
+                    onSelectSticker: { name in
+                        if let name {
+                            let dummyPhoto = BCutPhoto(id: UUID(), imageSource: .bundleAsset(name), isBCut: false, takenAt: Date())
+                            previewImageLayer = CassetteImageLayer(photo: dummyPhoto, maskStyle: stickerStyle)
+                        } else {
+                            previewImageLayer = nil
+                        }
+                    },
+                    onSelectLabel: { name in
+                        if let name {
+                            let dummyPhoto = BCutPhoto(id: UUID(), imageSource: .bundleAsset(name), isBCut: false, takenAt: Date())
+                            var layer = CassetteImageLayer(photo: dummyPhoto, maskStyle: .foreground)
+                            layer.isLabel = true
+                            previewImageLayer = layer
+                        } else {
+                            previewImageLayer = nil
+                        }
+                    },
                     onCancel: {
                         previewImageLayer = nil
                         selectedStickerPhoto = nil
+                        selectedStickerName = nil
+                        selectedLabelName = nil
                         withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
                     },
                     onDone: {
@@ -610,6 +573,8 @@ struct SelectDesignScreen: View {
                         }
                         previewImageLayer = nil
                         selectedStickerPhoto = nil
+                        selectedStickerName = nil
+                        selectedLabelName = nil
                         editingLayerZPos = nil
                         withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
                     }
@@ -751,19 +716,57 @@ struct SelectDesignScreen: View {
 
     // MARK: - 툴 버튼
 
-    @ViewBuilder
-    private func toolButton(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(Color.appWhite)
-                    .frame(width: 56, height: 56)
-                Image(icon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
-            }
+    @ViewBuilder private var editingTextLayerView: some View {
+        let textColor = Color(hex: selectedTextColorHex)
+        let bodyText = textInput.isEmpty ? " " : textInput
+        (
+            Text(bodyText).foregroundColor(textColor)
+            + Text("|").foregroundColor(cursorVisible ? .white : .clear).font(.system(size: selectedTextSize, weight: .ultraLight))
+        )
+        .font(selectedFont.swiftUIFont(size: selectedTextSize))
+        .padding(8)
+        .fixedSize()
+        .background(SizeReader { editingTextSquare = max($0.width, $0.height) })
+        .frame(minWidth: editingTextSquare, minHeight: editingTextSquare)
+        .contentShape(Rectangle())
+        .scaleEffect(textScale)
+        .rotationEffect(textRotation)
+        .position(x: cassetteFrame.midX + textDragOffset.width, y: cassetteFrame.midY + textDragOffset.height)
+        .gesture(DragGesture()
+            .onChanged { v in textDragOffset = CGSize(width: textDragBase.width + v.translation.width, height: textDragBase.height + v.translation.height) }
+            .onEnded { _ in textDragBase = textDragOffset })
+        .simultaneousGesture(MagnificationGesture()
+            .onChanged { v in textScale = textScaleBase * v }
+            .onEnded { _ in textScaleBase = textScale })
+        .simultaneousGesture(RotationGesture()
+            .onChanged { v in textRotation = textRotationBase + v }
+            .onEnded { _ in textRotationBase = textRotation })
+    }
+
+    private func enterTextEdit(at idx: Int) {
+        if showTextEditor && !textInput.isEmpty {
+            let saved = CassetteTextLayer(text: textInput, font: selectedFont, size: selectedTextSize, colorHex: selectedTextColorHex, offset: textDragOffset, scale: textScale, rotation: textRotation)
+            confirmedTextItems.append(saved)
+            orderedLayerIDs.append(saved.id)
+            if !textCreationOrder.contains(saved.id) { textCreationOrder.append(saved.id) }
         }
+        let tapped = confirmedTextItems[idx]
+        editingLayerID = tapped.id
+        editingLayerZPos = orderedLayerIDs.firstIndex(of: tapped.id)
+        textInput = tapped.text
+        selectedFont = tapped.font
+        selectedTextSize = tapped.size
+        selectedTextColorHex = tapped.colorHex
+        textDragOffset = tapped.offset
+        textDragBase = tapped.offset
+        textScale = tapped.scale
+        textScaleBase = tapped.scale
+        textRotation = tapped.rotation
+        textRotationBase = tapped.rotation
+        confirmedTextItems.remove(at: idx)
+        orderedLayerIDs.removeAll { $0 == tapped.id }
+        showTextEditor = true
+        textFieldFocused = true
     }
 
     @ViewBuilder
@@ -778,6 +781,20 @@ struct SelectDesignScreen: View {
                         RoundedRectangle(cornerRadius: 8)
                             .strokeBorder(isSelected ? Color.black : Color.clear, lineWidth: 1)
                     )
+                Image(icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
+            }
+        }
+    }
+
+    private func toolButton(icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(Color.appWhite)
+                    .frame(width: 56, height: 56)
                 Image(icon)
                     .resizable()
                     .scaledToFit()
@@ -872,8 +889,9 @@ struct CassetteCanvasView: View {
 
             // ── 이미지 레이어 (스타일별 mask) ──
             let s = width / baseWidth
-            let bgImages = imageLayers.filter { $0.maskStyle == .background }
-            let fgImages = imageLayers.filter { $0.maskStyle == .foreground }
+            let bgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .background }
+            let fgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .foreground }
+            let labelImages = imageLayers.filter { $0.isLabel }
             if !bgImages.isEmpty {
                 ZStack {
                     ForEach(bgImages) { item in
@@ -881,7 +899,7 @@ struct CassetteCanvasView: View {
                             Image(uiImage: img)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 120 * s, height: 120 * s)
+                                .frame(width: 160 * s, height: 160 * s)
                                 .scaleEffect(item.scale)
                                 .rotationEffect(item.rotation)
                                 .offset(x: item.offset.width * s, y: item.offset.height * s)
@@ -900,10 +918,27 @@ struct CassetteCanvasView: View {
                             Image(uiImage: img)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 120 * s, height: 120 * s)
+                                .frame(width: 160 * s, height: 160 * s)
                                 .scaleEffect(item.scale)
                                 .rotationEffect(item.rotation)
                                 .offset(x: item.offset.width * s, y: item.offset.height * s)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .mask {
+                    Image("cassette_mask_center").resizable().scaledToFit()
+                }
+            }
+            // ── 레이블 레이어 (고정 크기/위치, cassette_mask_center로 클립) ──
+            if !labelImages.isEmpty {
+                ZStack {
+                    ForEach(labelImages) { item in
+                        if let img = item.loadedImage {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: width)
                         }
                     }
                 }
@@ -1068,8 +1103,15 @@ struct CassetteSelectPanel: View {
 
 // MARK: - Sticker Enums
 
-enum StickerTab { case image, emoji }
+enum StickerTab { case image, sticker, label }
 enum StickerStyle { case background, foreground }
+
+let builtinLabels: [String] = [
+    "sticker_whole_1", "sticker_whole_2", "sticker_whole_3",
+    "sticker_whole_4", "sticker_whole_5", "sticker_whole_6",
+    "sticker_whole_7", "sticker_top_1", "sticker_top_2",
+    "sticker_bot_1"
+]
 
 // MARK: - Text 탭
 
@@ -1087,14 +1129,17 @@ struct TextEditPanel: View {
     }
 }
 
-// MARK: - Sticker 패널
+// MARK: - Decorate 패널
 
 struct StickerEditPanel: View {
     @Binding var selectedTab: StickerTab
-    @Binding var selectedStyle: StickerStyle
     @Binding var selectedPhoto: BCutPhoto?
     let photos: [BCutPhoto]
+    @Binding var selectedStickerName: String?
+    @Binding var selectedLabelName: String?
     var onSelect: (BCutPhoto?) -> Void = { _ in }
+    var onSelectSticker: (String?) -> Void = { _ in }
+    var onSelectLabel: (String?) -> Void = { _ in }
     var onCancel: () -> Void = {}
     var onDone: () -> Void
 
@@ -1107,15 +1152,15 @@ struct StickerEditPanel: View {
                 // ── 탭 버튼 ──
                 HStack(spacing: 12) {
                     tabButton(icon: "button_image", tab: .image)
-                    tabButton(icon: "button_emoji", tab: .emoji)
+                    tabButton(icon: "button_emoji", tab: .sticker)
+                    tabButton(icon: "button_foreground", tab: .label)
                 }
                 .padding(.bottom, 14)
                 .padding(.top, 16)
 
                 Divider()
-                    .frame(width: 208)
 
-                // ── 탭 콘텐츠 (b-cut 레이블 고정, 그리드만 스크롤) ──
+                // ── 탭 콘텐츠 ──
                 switch selectedTab {
                 case .image:
                     Text("b-cut from film")
@@ -1133,6 +1178,10 @@ struct StickerEditPanel: View {
                                     .onTapGesture {
                                         let next: BCutPhoto? = isSelected ? nil : photo
                                         selectedPhoto = next
+                                        if next != nil {
+                                            selectedStickerName = nil
+                                            selectedLabelName = nil
+                                        }
                                         onSelect(next)
                                     }
                             }
@@ -1140,27 +1189,91 @@ struct StickerEditPanel: View {
                         .padding(.bottom, 70)
                     }
                     .frame(maxHeight: .infinity)
-                case .emoji:
+
+                case .sticker:
+                    Text("sticker")
+                        .font(.appBody)
+                        .foregroundColor(.appDarkGray)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 14)
+                        .padding(.bottom, 12)
+
                     ScrollView(showsIndicators: false) {
                         Text("coming soon")
                             .font(.appMicro)
                             .foregroundColor(.appGray)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 32)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 20)
+                    }
+                    .frame(maxHeight: .infinity)
+
+                case .label:
+                    Text("label")
+                        .font(.appBody)
+                        .foregroundColor(.appDarkGray)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 14)
+                        .padding(.bottom, 12)
+
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(columns: photoColumns, spacing: 4) {
+                            ForEach(builtinLabels, id: \.self) { name in
+                                let isSelected = selectedLabelName == name
+                                ZStack {
+                                    Color.clear
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .overlay(
+                                            Image(name)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .padding(8)
+                                        )
+                                        .overlay(isSelected ? Color.black.opacity(0.15) : Color.clear)
+                                        .overlay(alignment: .topTrailing) {
+                                            if isSelected {
+                                                ZStack {
+                                                    Circle().fill(Color.appBlack).frame(width: 22, height: 22)
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 10, weight: .bold))
+                                                        .foregroundColor(.white)
+                                                }
+                                                .padding(6)
+                                            }
+                                        }
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(isSelected ? Color.appBlack : Color.clear, lineWidth: 1)
+                                )
+                                .onTapGesture {
+                                    let next: String? = isSelected ? nil : name
+                                    selectedLabelName = next
+                                    if next != nil {
+                                        selectedPhoto = nil
+                                        selectedStickerName = nil
+                                    }
+                                    onSelectLabel(next)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 70)
                     }
                     .frame(maxHeight: .infinity)
                 }
             }
 
-            // ── done 버튼 (그리드 위 floating) ──
+            // ── done 버튼 ──
+            let canDone = selectedPhoto != nil || selectedStickerName != nil || selectedLabelName != nil
             Button { onDone() } label: {
                 Text("done")
                     .font(.appBody)
                     .foregroundColor(.appWhite)
                     .frame(width: 201, height: 48)
-                    .background(Capsule().fill(selectedPhoto != nil ? Color.appDarkGray : Color.appGray))
+                    .background(Capsule().fill(canDone ? Color.appDarkGray : Color.appGray))
             }
-            .disabled(selectedPhoto == nil)
+            .disabled(!canDone)
             .padding(.bottom, 11)
 
         }
@@ -1223,6 +1336,7 @@ struct StickerPhotoCell: View {
                 }
             }
             .overlay(isSelected ? Color.black.opacity(0.15) : Color.clear)
+            .overlay(RoundedRectangle(cornerRadius: 0).strokeBorder(isSelected ? Color.appBlack : Color.clear, lineWidth: 1))
             .onAppear { loadImage() }
     }
 
@@ -1419,6 +1533,7 @@ struct CassetteImageLayer: Identifiable {
     let id = UUID()
     var photo: BCutPhoto
     var maskStyle: StickerStyle = .background
+    var isLabel: Bool = false   // label은 고정 위치/크기, gesture 없음
     var offset: CGSize = .zero
     var scale: CGFloat = 1.0
     var rotation: Angle = .zero
@@ -1443,70 +1558,114 @@ struct ConfirmedImageLayerView: View {
     }
 
     var body: some View {
-        Group {
-            if let img = image {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .clipped()
-            } else {
-                Color.appGray.opacity(0.3)
-                    .frame(width: 120, height: 120)
-            }
-        }
-        .scaleEffect(item.scale * magnifyDelta)
-        .rotationEffect(item.rotation + rotateDelta)
-        .position(
-            x: cassetteFrame.midX + item.offset.width + dragDelta.width,
-            y: cassetteFrame.midY + item.offset.height + dragDelta.height
-        )
-        .mask {
-            if cassetteFrame.width > 0 {
-                let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
-                Image(maskName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: cassetteFrame.width, height: cassetteFrame.height)
-                    .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
-            } else {
-                Color.white
-            }
-        }
-        .allowsHitTesting(activeLayerID == nil || activeLayerID == item.id)
-        .gesture(
-            DragGesture(minimumDistance: 4)
-                .updating($dragDelta) { v, state, _ in state = v.translation }
-                .onEnded { v in
-                    item.offset.width += v.translation.width
-                    item.offset.height += v.translation.height
+        let isBundleAsset: Bool = {
+            if case .bundleAsset = item.photo.imageSource { return true }
+            return false
+        }()
+        let baseW: CGFloat = isBundleAsset ? cassetteFrame.width : 160
+        let baseH: CGFloat = isBundleAsset ? cassetteFrame.height : 160
+
+        if item.isLabel {
+            // label: 고정 위치/크기, gesture 없음
+            Group {
+                if let img = image {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                } else {
+                    Color.clear
+                        .frame(width: cassetteFrame.width, height: cassetteFrame.height)
                 }
-        )
-        .simultaneousGesture(
-            MagnificationGesture()
-                .updating($magnifyDelta) { v, state, _ in state = v }
-                .onEnded { v in item.scale = max(0.1, item.scale * v) }
-        )
-        .simultaneousGesture(
-            RotationGesture()
-                .updating($rotateDelta) { v, state, _ in state = v }
-                .onEnded { v in item.rotation += v }
-        )
-        .onChange(of: isGestureActive) { _, active in
-            if active {
-                if activeLayerID == nil { activeLayerID = item.id }
-            } else {
-                if activeLayerID == item.id { activeLayerID = nil }
             }
+            .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+            .mask {
+                if cassetteFrame.width > 0 {
+                    Image("cassette_mask_center")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                        .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                } else {
+                    Color.white
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { onTap?() }
+            .onAppear { loadImage() }
+        } else {
+            // 일반 이미지/스티커: 이동/확대/회전 가능
+            Group {
+                if let img = image {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: baseW, height: baseH)
+                        .clipped()
+                } else {
+                    Color.appGray.opacity(0.3)
+                        .frame(width: baseW, height: baseH)
+                }
+            }
+            .scaleEffect(item.scale * magnifyDelta)
+            .rotationEffect(item.rotation + rotateDelta)
+            .position(
+                x: cassetteFrame.midX + item.offset.width + dragDelta.width,
+                y: cassetteFrame.midY + item.offset.height + dragDelta.height
+            )
+            .mask {
+                if cassetteFrame.width > 0 {
+                    let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
+                    Image(maskName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: cassetteFrame.width, height: cassetteFrame.height)
+                        .position(x: cassetteFrame.midX, y: cassetteFrame.midY)
+                } else {
+                    Color.white
+                }
+            }
+            .allowsHitTesting(activeLayerID == nil || activeLayerID == item.id)
+            .gesture(
+                DragGesture(minimumDistance: 4)
+                    .updating($dragDelta) { v, state, _ in state = v.translation }
+                    .onEnded { v in
+                        item.offset.width += v.translation.width
+                        item.offset.height += v.translation.height
+                    }
+            )
+            .simultaneousGesture(
+                MagnificationGesture()
+                    .updating($magnifyDelta) { v, state, _ in state = v }
+                    .onEnded { v in item.scale = max(0.1, item.scale * v) }
+            )
+            .simultaneousGesture(
+                RotationGesture()
+                    .updating($rotateDelta) { v, state, _ in state = v }
+                    .onEnded { v in item.rotation += v }
+            )
+            .onChange(of: isGestureActive) { _, active in
+                if active {
+                    if activeLayerID == nil { activeLayerID = item.id }
+                } else {
+                    if activeLayerID == item.id { activeLayerID = nil }
+                }
+            }
+            .onTapGesture { onTap?() }
+            .onAppear { loadImage() }
         }
-        .onTapGesture { onTap?() }
-        .onAppear { loadImage() }
     }
 
     func loadImage() {
         // 이미 캐시된 이미지 있으면 즉시 사용 (재렌더 시 깜빡임 방지)
         if let cached = item.loadedImage {
             image = cached
+            return
+        }
+        if case .bundleAsset(let name) = item.photo.imageSource,
+           let img = UIImage(named: name) {
+            image = img
+            item.loadedImage = img
             return
         }
         if case .file(let url) = item.photo.imageSource,
@@ -1705,6 +1864,19 @@ extension UIImage {
 
 // MARK: - LayerPanelView
 
+// MARK: - SizeReader
+
+private struct SizeReader: View {
+    let onChange: (CGSize) -> Void
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear { onChange(geo.size) }
+                .onChange(of: geo.size) { _, s in onChange(s) }
+        }
+    }
+}
+
 struct LayerPanelView: View {
     @Binding var orderedLayerIDs: [UUID]
     @Binding var confirmedImageItems: [CassetteImageLayer]
@@ -1722,14 +1894,40 @@ struct LayerPanelView: View {
 
     private enum LayerInfo {
         case image(n: Int, thumb: UIImage?)
+        case sticker(n: Int, thumb: UIImage?)
+        case label(n: Int, thumb: UIImage?)
         case text(n: Int, content: String)
         case unknown
     }
 
     private func layerInfo(for id: UUID) -> LayerInfo {
-        if let idx = imageCreationOrder.firstIndex(of: id) {
-            let thumb = confirmedImageItems.first(where: { $0.id == id })?.loadedImage
-            return .image(n: idx + 1, thumb: thumb)
+        if let item = confirmedImageItems.first(where: { $0.id == id }) {
+            let thumb = item.loadedImage
+            if item.isLabel {
+                let labelIDs = imageCreationOrder.filter { sid in
+                    confirmedImageItems.first(where: { $0.id == sid })?.isLabel ?? false
+                }
+                let n = (labelIDs.firstIndex(of: id) ?? 0) + 1
+                return .label(n: n, thumb: thumb)
+            } else if case .bundleAsset = item.photo.imageSource {
+                let stickerIDs = imageCreationOrder.filter { sid in
+                    guard let it = confirmedImageItems.first(where: { $0.id == sid }) else { return false }
+                    if it.isLabel { return false }
+                    if case .bundleAsset = it.photo.imageSource { return true }
+                    return false
+                }
+                let n = (stickerIDs.firstIndex(of: id) ?? 0) + 1
+                return .sticker(n: n, thumb: thumb)
+            } else {
+                let imageIDs = imageCreationOrder.filter { sid in
+                    guard let it = confirmedImageItems.first(where: { $0.id == sid }) else { return false }
+                    if it.isLabel { return false }
+                    if case .bundleAsset = it.photo.imageSource { return false }
+                    return true
+                }
+                let n = (imageIDs.firstIndex(of: id) ?? 0) + 1
+                return .image(n: n, thumb: thumb)
+            }
         } else if let idx = textCreationOrder.firstIndex(of: id) {
             let content = confirmedTextItems.first(where: { $0.id == id })?.text ?? ""
             return .text(n: idx + 1, content: content)
@@ -1815,6 +2013,32 @@ struct LayerPanelView: View {
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
+                        .frame(width: 54, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
+            case .sticker(let n, let thumb):
+                Text("sticker \(n)")
+                    .font(.appBody)
+                    .foregroundColor(.appBlack)
+                    .lineLimit(1)
+                    .padding(.trailing, 8)
+                if let img = thumb {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
+            case .label(let n, let thumb):
+                Text("label \(n)")
+                    .font(.appBody)
+                    .foregroundColor(.appBlack)
+                    .lineLimit(1)
+                    .padding(.trailing, 8)
+                if let img = thumb {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 54, height: 18)
                         .clipShape(RoundedRectangle(cornerRadius: 2))
                 }

@@ -46,8 +46,9 @@ struct CassetteModel: Identifiable, Codable, Equatable {
 // MARK: - Image Source
 
 enum BCutImageSource: Codable, Equatable {
-    case asset(String)
+    case asset(String)        // PHAsset localIdentifier
     case file(URL)
+    case bundleAsset(String)  // Bundle 에셋 이름 (스티커용)
 
     private static var documentsURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -61,6 +62,8 @@ enum BCutImageSource: Codable, Equatable {
         let value = try c.decode(String.self, forKey: .value)
         if type == "asset" {
             self = .asset(value)
+        } else if type == "bundleAsset" {
+            self = .bundleAsset(value)
         } else {
             self = .file(Self.documentsURL.appendingPathComponent(value))
         }
@@ -71,6 +74,9 @@ enum BCutImageSource: Codable, Equatable {
         switch self {
         case .asset(let name):
             try c.encode("asset", forKey: .type)
+            try c.encode(name, forKey: .value)
+        case .bundleAsset(let name):
+            try c.encode("bundleAsset", forKey: .type)
             try c.encode(name, forKey: .value)
         case .file(let url):
             let relative = url.path.replacingOccurrences(
