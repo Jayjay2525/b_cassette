@@ -896,10 +896,12 @@ struct CassetteCanvasView: View {
                 ZStack {
                     ForEach(bgImages) { item in
                         if let img = item.loadedImage {
+                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
                             Image(uiImage: img)
                                 .resizable()
-                                .scaledToFit()
-                                .frame(width: 160 * s, height: 160 * s)
+                                .scaledToFill()
+                                .frame(width: cw, height: 160 * s)
+                                .modifier(CropShapeClip(shape: item.cropShape))
                                 .scaleEffect(item.scale)
                                 .rotationEffect(item.rotation)
                                 .offset(x: item.offset.width * s, y: item.offset.height * s)
@@ -915,10 +917,12 @@ struct CassetteCanvasView: View {
                 ZStack {
                     ForEach(fgImages) { item in
                         if let img = item.loadedImage {
+                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
                             Image(uiImage: img)
                                 .resizable()
-                                .scaledToFit()
-                                .frame(width: 160 * s, height: 160 * s)
+                                .scaledToFill()
+                                .frame(width: cw, height: 160 * s)
+                                .modifier(CropShapeClip(shape: item.cropShape))
                                 .scaleEffect(item.scale)
                                 .rotationEffect(item.rotation)
                                 .offset(x: item.offset.width * s, y: item.offset.height * s)
@@ -1105,6 +1109,15 @@ struct CassetteSelectPanel: View {
 
 enum StickerTab { case image, sticker, label }
 enum StickerStyle { case background, foreground }
+enum CropShape { case rect, square, circle
+    var next: CropShape {
+        switch self {
+        case .rect: return .square
+        case .square: return .circle
+        case .circle: return .rect
+        }
+    }
+}
 
 let builtinLabels: [String] = [
     "sticker_whole_1", "sticker_whole_2", "sticker_whole_3",
@@ -1534,10 +1547,24 @@ struct CassetteImageLayer: Identifiable {
     var photo: BCutPhoto
     var maskStyle: StickerStyle = .background
     var isLabel: Bool = false   // label은 고정 위치/크기, gesture 없음
+    var cropShape: CropShape = .rect
     var offset: CGSize = .zero
     var scale: CGFloat = 1.0
     var rotation: Angle = .zero
     var loadedImage: UIImage? = nil
+}
+
+// MARK: - CropShapeClip
+
+private struct CropShapeClip: ViewModifier {
+    let shape: CropShape
+    func body(content: Content) -> some View {
+        switch shape {
+        case .rect:   content.clipped()
+        case .square: content.clipped()
+        case .circle: content.clipShape(Circle())
+        }
+    }
 }
 
 // MARK: - ConfirmedImageLayerView
@@ -1562,8 +1589,11 @@ struct ConfirmedImageLayerView: View {
             if case .bundleAsset = item.photo.imageSource { return true }
             return false
         }()
-        let baseW: CGFloat = isBundleAsset ? cassetteFrame.width : 160
-        let baseH: CGFloat = isBundleAsset ? cassetteFrame.height : 160
+        let isRegularImage = !isBundleAsset && !item.isLabel
+        let cropW: CGFloat = (isRegularImage && item.cropShape == .rect) ? 120 : 160
+        let cropH: CGFloat = 160
+        let baseW: CGFloat = isBundleAsset ? cassetteFrame.width : cropW
+        let baseH: CGFloat = isBundleAsset ? cassetteFrame.height : cropH
 
         if item.isLabel {
             // label: 고정 위치/크기, gesture 없음
@@ -1599,9 +1629,9 @@ struct ConfirmedImageLayerView: View {
                 if let img = image {
                     Image(uiImage: img)
                         .resizable()
-                        .scaledToFit()
+                        .scaledToFill()
                         .frame(width: baseW, height: baseH)
-                        .clipped()
+                        .modifier(CropShapeClip(shape: isRegularImage ? item.cropShape : .rect))
                 } else {
                     Color.appGray.opacity(0.3)
                         .frame(width: baseW, height: baseH)
@@ -1651,7 +1681,14 @@ struct ConfirmedImageLayerView: View {
                     if activeLayerID == item.id { activeLayerID = nil }
                 }
             }
-            .onTapGesture { onTap?() }
+            .onTapGesture {
+                if isRegularImage && onTap == nil {
+                    // 프리뷰 중: crop 순환
+                    item.cropShape = item.cropShape.next
+                } else {
+                    onTap?()
+                }
+            }
             .onAppear { loadImage() }
         }
     }
