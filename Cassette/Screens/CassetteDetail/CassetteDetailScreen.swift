@@ -23,6 +23,7 @@ struct CassetteDetailScreen: View {
     @State private var player: AVAudioPlayer? = nil
     @State private var filmManualOffset: CGFloat = 0
     @State private var filmDragTranslation: CGFloat = 0
+    @State private var showShare: Bool = false
 
     // MARK: - Timer
     private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
@@ -104,6 +105,9 @@ struct CassetteDetailScreen: View {
             }
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showShare) {
+            CassetteShareScreen(cassette: cassette)
+        }
         .onChange(of: appState.cassettes) {
             if let updated = appState.cassettes.first(where: { $0.id == cassette.id }) {
                 cassette = updated
@@ -165,7 +169,7 @@ struct CassetteDetailScreen: View {
                 .frame(width: 251, height: 36, alignment: .center)
                 .background(Color.appWhite)
 
-            Button { /* TODO: share */ } label: {
+            Button { showShare = true } label: {
                 Image("button_share")
                     .resizable()
                     .scaledToFit()

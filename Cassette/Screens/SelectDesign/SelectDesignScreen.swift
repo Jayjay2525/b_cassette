@@ -523,6 +523,17 @@ struct SelectDesignScreen: View {
 
             // ── 스티커 패널 (인라인, 어두운 오버레이 없음) ──
             if showStickerPanel {
+                // 패널 바깥 탭 → dismiss (선택 없을 때만, 선택 후에는 오버레이 자체를 제거)
+                if previewImageLayer == nil {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
+                        }
+                        .ignoresSafeArea()
+                        .zIndex(19)
+                }
+
                 StickerEditPanel(
                     selectedTab: $stickerTab,
                     selectedPhoto: $selectedStickerPhoto,
@@ -826,12 +837,16 @@ struct SelectDesignScreen: View {
     @MainActor
     private func renderOnly() async {
         let renderWidth: CGFloat = 1035
+        // orderedLayerIDs 순서대로 정렬해서 z-order 보존
+        let orderedImages = orderedLayerIDs.compactMap { id in
+            confirmedImageItems.first(where: { $0.id == id })
+        }
         let renderView = CassetteCanvasView(
             colorName: cassetteData.selectedCassetteColor,
             width: renderWidth,
             applyMask: false,
             textLayers: confirmedTextItems,
-            imageLayers: confirmedImageItems
+            imageLayers: orderedImages
         )
         let renderer = ImageRenderer(content: renderView)
         renderer.scale = 1.0
@@ -887,68 +902,37 @@ struct CassetteCanvasView: View {
             Image("cassette_\(colorName)").resizable().scaledToFit()
             Image("bolts").resizable().scaledToFit()
 
-            // ── 이미지 레이어 (스타일별 mask) ──
+            // ── 이미지 레이어 — 배열 순서(= orderedLayerIDs 순)대로 개별 렌더 ──
             let s = width / baseWidth
-            let bgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .background }
-            let fgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .foreground }
-            let labelImages = imageLayers.filter { $0.isLabel }
-            if !bgImages.isEmpty {
-                ZStack {
-                    ForEach(bgImages) { item in
-                        if let img = item.loadedImage {
-                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: cw, height: 160 * s)
-                                .modifier(CropShapeClip(shape: item.cropShape))
-                                .scaleEffect(item.scale)
-                                .rotationEffect(item.rotation)
-                                .offset(x: item.offset.width * s, y: item.offset.height * s)
-                        }
+            ForEach(imageLayers) { item in
+                if let img = item.loadedImage {
+                    if item.isLabel {
+                        // 레이블: 고정 위치, cassette_mask_center 클립
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: width)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .mask {
+                                Image("cassette_mask_center").resizable().scaledToFit()
+                            }
+                    } else {
+                        // 이미지/스티커: 마스크 종류에 따라 클립
+                        let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
+                        let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: cw, height: 160 * s)
+                            .modifier(CropShapeClip(shape: item.cropShape))
+                            .scaleEffect(item.scale)
+                            .rotationEffect(item.rotation)
+                            .offset(x: item.offset.width * s, y: item.offset.height * s)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .mask {
+                                Image(maskName).resizable().scaledToFit()
+                            }
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_outside").resizable().scaledToFit()
-                }
-            }
-            if !fgImages.isEmpty {
-                ZStack {
-                    ForEach(fgImages) { item in
-                        if let img = item.loadedImage {
-                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: cw, height: 160 * s)
-                                .modifier(CropShapeClip(shape: item.cropShape))
-                                .scaleEffect(item.scale)
-                                .rotationEffect(item.rotation)
-                                .offset(x: item.offset.width * s, y: item.offset.height * s)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_center").resizable().scaledToFit()
-                }
-            }
-            // ── 레이블 레이어 (고정 크기/위치, cassette_mask_center로 클립) ──
-            if !labelImages.isEmpty {
-                ZStack {
-                    ForEach(labelImages) { item in
-                        if let img = item.loadedImage {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: width)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_center").resizable().scaledToFit()
                 }
             }
 
