@@ -60,16 +60,16 @@ struct CassetteShareScreen: View {
                 .frame(width: cardWidth, height: cardHeight)
                 .clipped()
                 .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-                .padding(.top, 54)
+                .padding(.top, 44)
 
-            Spacer().frame(height: 32)
+            Spacer().frame(height: 12)
 
             // ── 음악 컨트롤 ──
             musicControl
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)
 
-            Spacer().frame(height: 24)
+            Spacer().frame(height: 4)
 
             // ── 색상 팔레트 ──
             HStack(spacing: 12) {
