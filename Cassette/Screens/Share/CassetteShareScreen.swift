@@ -60,7 +60,7 @@ struct CassetteShareScreen: View {
                 .frame(width: cardWidth, height: cardHeight)
                 .clipped()
                 .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-                .padding(.top, 34)
+                .padding(.top, 54)
 
             Spacer().frame(height: 32)
 
@@ -198,8 +198,8 @@ struct CassetteShareScreen: View {
                     .font(.appMicro)
                     .foregroundColor(.white.opacity(0.6))
 
-                CassetteImageView(cassette: cassette, width: 130)
-                    .frame(width: 130)
+                CassetteImageView(cassette: cassette, width: 156)
+                    .frame(width: 156)
 
                 Text(cassette.name)
                     .font(.appBody)
