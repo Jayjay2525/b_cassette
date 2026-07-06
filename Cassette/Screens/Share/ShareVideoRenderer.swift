@@ -50,6 +50,7 @@ enum ShareVideoRenderer {
         var audioInput: AVAssetWriterInput? = nil
         var audioReader: AVAssetReader? = nil
         var audioTrackOutput: AVAssetReaderTrackOutput? = nil
+        var audioStartSecs: Double = 0
 
         if let audioURL = resolveTrackURL(for: cassette) {
             let audioAsset = AVURLAsset(url: audioURL)
@@ -63,6 +64,7 @@ enum ShareVideoRenderer {
                 let assetDuration = try await audioAsset.load(.duration)
                 let totalSecs = CMTimeGetSeconds(assetDuration)
                 let startSecs = totalSecs * musicStartRatio
+                audioStartSecs = startSecs
                 let startTime = CMTime(seconds: startSecs, preferredTimescale: 44100)
                 let endTime = CMTime(seconds: min(startSecs + duration, totalSecs), preferredTimescale: 44100)
 
@@ -126,7 +128,7 @@ enum ShareVideoRenderer {
         let bgColorBox = UncheckedSendableBox(bgColor)
 
         // 비디오와 오디오를 동시에 write (pre-render 불필요 — 오디오 동시 공급으로 isReadyForMoreMediaData 정상 동작)
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             let group = DispatchGroup()
 
             // 비디오: frame-by-frame 렌더 + write
@@ -170,7 +172,19 @@ enum ShareVideoRenderer {
                         }
                         if audioReaderBox.value.status == .reading,
                            let sampleBuffer = audioTrackOutputBox.value.copyNextSampleBuffer() {
-                            audioInputBox.value.append(sampleBuffer)
+                            // presentationTime을 0 기준으로 재조정
+                            let originalTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                            let adjustedTime = CMTimeSubtract(originalTime, CMTime(seconds: audioStartSecs, preferredTimescale: originalTime.timescale))
+                            var timingInfo = CMSampleTimingInfo(
+                                duration: CMSampleBufferGetDuration(sampleBuffer),
+                                presentationTimeStamp: adjustedTime,
+                                decodeTimeStamp: .invalid
+                            )
+                            var adjustedBuffer: CMSampleBuffer?
+                            CMSampleBufferCreateCopyWithNewTiming(allocator: nil, sampleBuffer: sampleBuffer, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleBufferOut: &adjustedBuffer)
+                            if let adjusted = adjustedBuffer {
+                                audioInputBox.value.append(adjusted)
+                            }
                         } else {
                             print("[ShareVideoRenderer] 오디오 완료 (reader status: \(audioReaderBox.value.status.rawValue))")
                             audioInputBox.value.markAsFinished()

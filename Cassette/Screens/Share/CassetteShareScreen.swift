@@ -27,6 +27,7 @@ struct CassetteShareScreen: View {
 
     // 카드 그리드 애니메이션
     @State private var gridScrollOffset: CGFloat = 0
+    @State private var gridDragStartOffset: CGFloat = 0
     @State private var animationTimer: Timer? = nil
 
     // 재생 중 진행 표시
@@ -95,10 +96,10 @@ struct CassetteShareScreen: View {
 
                 // ── 하단 버튼 ──
                 HStack(spacing: 32) {
-                    exportButton(icon: "square.and.arrow.down", label: "save video") {
+                    exportButton(icon: "button_video", label: "save video") {
                         exportVideo(shareToInstagram: false)
                     }
-                    exportButton(icon: "camera.fill", label: "instagram") {
+                    exportButton(icon: "button_instagram", label: "instagram") {
                         exportVideo(shareToInstagram: true)
                     }
                 }
@@ -154,27 +155,39 @@ struct CassetteShareScreen: View {
                 .frame(width: cardWidth, height: cardHeight)
 
             // Z2: 이미지 그리드 — 6pt padding, 셀 118×157pt, gap 6pt
-            VStack(spacing: 0) {
-                LazyVGrid(columns: columns, spacing: gap) {
-                    ForEach(Array((bCuts.isEmpty ? [nil] : bCuts.map { Optional($0) }).enumerated()), id: \.offset) { _, photo in
-                        Group {
-                            if let photo {
-                                SharePhotoCell(photo: photo)
-                            } else {
-                                Color.gray.opacity(0.3)
-                            }
+            let rows = CGFloat((bCuts.count + 1) / 2)
+            let totalGridH = rows * cellH + (rows - 1) * gap + gap * 2
+            let maxScrollable = max(0, totalGridH - cardHeight)
+            LazyVGrid(columns: columns, spacing: gap) {
+                ForEach(Array((bCuts.isEmpty ? [nil] : bCuts.map { Optional($0) }).enumerated()), id: \.offset) { _, photo in
+                    Group {
+                        if let photo {
+                            SharePhotoCell(photo: photo)
+                        } else {
+                            Color.gray.opacity(0.3)
                         }
-                        .frame(width: cellW, height: cellH)
-                        .clipped()
                     }
+                    .frame(width: cellW, height: cellH)
+                    .clipped()
                 }
-                .padding(gap)
-                .offset(y: -gridScrollOffset)
-                .animation(.linear(duration: 0.05), value: gridScrollOffset)
-                Spacer()
             }
-            .frame(width: cardWidth, height: cardHeight)
+            .padding(gap)
+            .frame(width: cardWidth, height: totalGridH, alignment: .top)
+            .offset(y: -gridScrollOffset)
+            .animation(.linear(duration: 0.05), value: gridScrollOffset)
+            .frame(width: cardWidth, height: cardHeight, alignment: .top)
             .clipped()
+            .gesture(
+                DragGesture()
+                    .onChanged { v in
+                        guard !isPlaying else { return }
+                        let newOffset = gridDragStartOffset - v.translation.height
+                        gridScrollOffset = min(maxScrollable, max(0, newOffset))
+                    }
+                    .onEnded { _ in
+                        gridDragStartOffset = gridScrollOffset
+                    }
+            )
 
             // Z3: 검정 75% 불투명 rounded rect — 색상 고정, palette 무관
             RoundedRectangle(cornerRadius: 16)
@@ -312,19 +325,31 @@ struct CassetteShareScreen: View {
         playProgress = 0
         stopProgressTimer()
         stopGridAnimation()
-        gridScrollOffset = 0
+        gridDragStartOffset = gridScrollOffset
     }
 
     private func startGridAnimation() {
         let bCuts = cassette.bCuts
-        guard bCuts.count > 0 else { return }
-        let cellH: CGFloat = cardWidth / 2 * (4.0 / 3.0)
-        let maxScroll = CGFloat(bCuts.count / 2) * (cellH + 2)
+        guard bCuts.count > 0, musicDuration > 0 else { return }
+
+        let cellW: CGFloat = 118
+        let cellH: CGFloat = cellW * 4 / 3
+        let gap: CGFloat = 6
+        let rows = CGFloat((bCuts.count + 1) / 2)
+        let totalGridH = rows * cellH + (rows - 1) * gap + gap * 2
+        let maxScrollable = max(0, totalGridH - cardHeight)
+
+        let startOffset = gridScrollOffset
+        // 15초 동안 스크롤할 거리 = 전체 그리드 높이 * (15 / 음악 전체 길이)
+        let scrollDistance = totalGridH * CGFloat(15.0 / musicDuration)
+        let endOffset = min(maxScrollable, startOffset + scrollDistance)
+
+        // 시작점이 이미 끝에 닿아있으면 애니메이션 없음
+        guard startOffset < maxScrollable else { return }
 
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
             guard isPlaying else { return }
-            gridScrollOffset += 0.8
-            if gridScrollOffset > maxScroll { gridScrollOffset = 0 }
+            gridScrollOffset = startOffset + (endOffset - startOffset) * playProgress
         }
     }
 
@@ -445,12 +470,13 @@ struct CassetteShareScreen: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.appWhite)
-                        .frame(width: 56, height: 56)
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(.appBlack)
+                        .frame(width: 48, height: 48)
+                    Image(icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
                 }
                 Text(label)
                     .font(.appMicro)
