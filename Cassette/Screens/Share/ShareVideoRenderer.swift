@@ -16,8 +16,8 @@ enum ShareVideoRenderer {
         let outputURL = tempDir.appendingPathComponent("\(cassette.id.uuidString)_share.mp4")
         try? FileManager.default.removeItem(at: outputURL)
 
-        // 720×1280 — Instagram Stories 충분한 품질, 1080p 대비 메모리 절반
-        let videoSize = CGSize(width: 720, height: 1280)
+        // 1080×1920 — Instagram Stories 최대 권장 해상도
+        let videoSize = CGSize(width: 1080, height: 1920)
         let duration: Double = 15.0  // 15초
 
         // AVAssetWriter 설정
@@ -28,7 +28,7 @@ enum ShareVideoRenderer {
             AVVideoWidthKey: Int(videoSize.width),
             AVVideoHeightKey: Int(videoSize.height),
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: 4_000_000,  // 4 Mbps
+                AVVideoAverageBitRateKey: 8_000_000,  // 8 Mbps
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
             ],
         ]

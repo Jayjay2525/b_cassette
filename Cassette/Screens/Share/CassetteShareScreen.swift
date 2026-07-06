@@ -53,59 +53,57 @@ struct CassetteShareScreen: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
 
-                // ── 공유 카드 미리보기 ──
-                shareCard
-                    .frame(width: cardWidth, height: cardHeight)
-                    .clipped()
-                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-                    .padding(.top, 34)
+            // ── 공유 카드 미리보기 ──
+            shareCard
+                .frame(width: cardWidth, height: cardHeight)
+                .clipped()
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+                .padding(.top, 34)
 
-                Spacer().frame(height: 32)
+            Spacer().frame(height: 32)
 
-                // ── 음악 컨트롤 ──
-                musicControl
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
+            // ── 음악 컨트롤 ──
+            musicControl
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
 
-                Spacer().frame(height: 24)
+            Spacer().frame(height: 24)
 
-                // ── 색상 팔레트 ──
-                HStack(spacing: 12) {
-                    ForEach(palette, id: \.hex) { item in
-                        let isSelected = selectedColorHex == item.hex
-                        let strokeColor: Color = item.hex == "000000" ? .white : .appBlack
-                        Circle()
-                            .fill(item.color)
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Circle().strokeBorder(strokeColor, lineWidth: isSelected ? 1 : 0)
-                            )
-                            .onTapGesture { selectedColorHex = item.hex }
-                    }
-                    // 커스텀 색상 (color picker)
-                    let paletteHexes = palette.map(\.hex)
-                    let customSelected = !paletteHexes.contains(selectedColorHex)
-                    ColorPickerCircle(selectedHex: $selectedColorHex, isCustomSelected: customSelected)
+            // ── 색상 팔레트 ──
+            HStack(spacing: 12) {
+                ForEach(palette, id: \.hex) { item in
+                    let isSelected = selectedColorHex == item.hex
+                    let strokeColor: Color = item.hex == "000000" ? .white : .appBlack
+                    Circle()
+                        .fill(item.color)
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Circle().strokeBorder(strokeColor, lineWidth: isSelected ? 1 : 0)
+                        )
+                        .onTapGesture { selectedColorHex = item.hex }
                 }
-                .padding(.horizontal, 24)
-
-                Spacer().frame(height: 24)
-
-                // ── 하단 버튼 ──
-                HStack(spacing: 32) {
-                    exportButton(icon: "button_video", label: "save video") {
-                        exportVideo(shareToInstagram: false)
-                    }
-                    exportButton(icon: "button_instagram", label: "instagram") {
-                        exportVideo(shareToInstagram: true)
-                    }
-                }
-
-                Spacer().frame(height: 32)
+                // 커스텀 색상 (color picker)
+                let paletteHexes = palette.map(\.hex)
+                let customSelected = !paletteHexes.contains(selectedColorHex)
+                ColorPickerCircle(selectedHex: $selectedColorHex, isCustomSelected: customSelected)
             }
+            .padding(.horizontal, 24)
+
+            Spacer().frame(height: 24)
+
+            // ── 하단 버튼 ──
+            HStack(spacing: 32) {
+                exportButton(icon: "button_video", label: "save video") {
+                    exportVideo(shareToInstagram: false)
+                }
+                exportButton(icon: "button_instagram", label: "instagram") {
+                    exportVideo(shareToInstagram: true)
+                }
+            }
+
+            Spacer().frame(height: 32)
         }
         .background(Color.appBackground)
         .presentationDetents([.large])

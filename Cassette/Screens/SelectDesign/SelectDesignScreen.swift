@@ -408,12 +408,12 @@ struct SelectDesignScreen: View {
             }
 
             // ── 스티커 프리뷰 레이어 — 항상 confirmed 레이어 위 (cassette_multiply 아래) ──
-            if let _ = previewImageLayer {
+            if let layer = previewImageLayer {
                 ConfirmedImageLayerView(item: Binding(
-                    get: { previewImageLayer! },
+                    get: { previewImageLayer ?? layer },
                     set: { previewImageLayer = $0 }
                 ), cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
-                .id(previewImageLayer?.id)
+                .id(layer.id)
                 .allowsHitTesting(!showTypePopup)
                 .zIndex(15)
             }
