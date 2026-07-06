@@ -6,6 +6,10 @@ enum InfoPanelMode {
     case cassette   // 선택된 카세트 정보
 }
 
+enum DragAxis {
+    case none, vertical, horizontal
+}
+
 struct MainScreen: View {
     @EnvironmentObject var appState: AppState
     @State private var panelMode: InfoPanelMode = .overall
@@ -14,6 +18,7 @@ struct MainScreen: View {
     @State private var rotationIndex: Int = 2
     @State private var dragOffset: CGFloat = 0
     @State private var swipeRightOffset: CGFloat = 0
+    @State private var dragAxis: DragAxis = .none
     @State private var selectedCassette: CassetteModel? = nil
     @State private var navigateToDetail = false
     @State private var showNewCassette = false
@@ -127,13 +132,16 @@ struct MainScreen: View {
                         .gesture(
                             DragGesture(minimumDistance: 10)
                                 .onChanged { v in
-                                    guard appState.cassettes.count >= 2,
-                                          abs(v.translation.height) > abs(v.translation.width) else { return }
+                                    guard appState.cassettes.count >= 2 else { return }
+                                    if dragAxis == .none {
+                                        dragAxis = abs(v.translation.height) > abs(v.translation.width) ? .vertical : .horizontal
+                                    }
+                                    guard dragAxis == .vertical else { return }
                                     dragOffset = v.translation.height
                                 }
-                                .onEnded { v in
-                                    guard abs(v.translation.height) > abs(v.translation.width) else { return }
-                                    commitSwipe()
+                                .onEnded { _ in
+                                    if dragAxis == .vertical { commitSwipe() }
+                                    dragAxis = .none
                                 }
                         )
 
@@ -147,13 +155,16 @@ struct MainScreen: View {
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 10)
                             .onChanged { v in
-                                guard appState.cassettes.count >= 2,
-                                      abs(v.translation.height) > abs(v.translation.width) else { return }
+                                guard appState.cassettes.count >= 2 else { return }
+                                if dragAxis == .none {
+                                    dragAxis = abs(v.translation.height) > abs(v.translation.width) ? .vertical : .horizontal
+                                }
+                                guard dragAxis == .vertical else { return }
                                 dragOffset = v.translation.height
                             }
-                            .onEnded { v in
-                                guard abs(v.translation.height) > abs(v.translation.width) else { return }
-                                commitSwipe()
+                            .onEnded { _ in
+                                if dragAxis == .vertical { commitSwipe() }
+                                dragAxis = .none
                             }
                     )
 
@@ -187,8 +198,25 @@ struct MainScreen: View {
                                 }
                             }
                         },
-                        onSwipeRightChanged: onSwipeRightChanged,
-                        onSwipeRightEnded: onSwipeRightEnded,
+                        onSwipeRightChanged: { offset in
+                            guard dragAxis != .vertical else { return }
+                            if dragAxis == .none { dragAxis = .horizontal }
+                            onSwipeRightChanged(offset)
+                        },
+                        onSwipeRightEnded: { offset in
+                            onSwipeRightEnded(offset)
+                            dragAxis = .none
+                        },
+                        onVerticalDragChanged: { offset in
+                            guard appState.cassettes.count >= 2 else { return }
+                            guard dragAxis != .horizontal else { return }
+                            if dragAxis == .none { dragAxis = .vertical }
+                            dragOffset = offset
+                        },
+                        onVerticalDragEnded: {
+                            if dragAxis == .vertical { commitSwipe() }
+                            dragAxis = .none
+                        },
                         onAddTap: {
                             if appState.isFull { showFullToast = true }
                             else { showNewCassette = true }
@@ -399,6 +427,8 @@ struct CassetteStackLayer: View {
     let onSetMain: (CassetteModel) -> Void
     let onSwipeRightChanged: (CGFloat) -> Void
     let onSwipeRightEnded: (CGFloat) -> Void
+    let onVerticalDragChanged: (CGFloat) -> Void
+    let onVerticalDragEnded: () -> Void
     let onAddTap: () -> Void
 
     // 슬롯 우선순위: main → 아래 → 더아래 → 위 → 더위
@@ -463,6 +493,18 @@ struct CassetteStackLayer: View {
                             }
                             .onEnded { v in onSwipeRightEnded(v.translation.width) }
                         : nil)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 10)
+                                .onChanged { v in
+                                    guard count >= 2,
+                                          abs(v.translation.height) > abs(v.translation.width) else { return }
+                                    onVerticalDragChanged(v.translation.height)
+                                }
+                                .onEnded { v in
+                                    guard abs(v.translation.height) > abs(v.translation.width) else { return }
+                                    onVerticalDragEnded()
+                                }
+                        )
                         .onTapGesture {
                             if isMain { onTap(cassette) } else { onSetMain(cassette) }
                         }
@@ -472,7 +514,7 @@ struct CassetteStackLayer: View {
                             .resizable().scaledToFit()
                             .frame(width: arrowWidth)
                             .scaleEffect(1.05)
-                            .position(x: geo.size.width / 2 - 5, y: geo.size.height / 2)
+                            .position(x: geo.size.width / 2 + 5, y: geo.size.height / 2 - 5)
                             .opacity(circleActive ? 1 : 0)
                             .animation(.easeInOut(duration: 0.25), value: circleActive)
                             .zIndex(0)
@@ -539,6 +581,18 @@ struct CassetteStackLayer: View {
                                     }
                                     .onEnded { v in onSwipeRightEnded(v.translation.width) }
                                 : nil)
+                                .simultaneousGesture(
+                                    DragGesture(minimumDistance: 10)
+                                        .onChanged { v in
+                                            guard count >= 2,
+                                                  abs(v.translation.height) > abs(v.translation.width) else { return }
+                                            onVerticalDragChanged(v.translation.height)
+                                        }
+                                        .onEnded { v in
+                                            guard abs(v.translation.height) > abs(v.translation.width) else { return }
+                                            onVerticalDragEnded()
+                                        }
+                                )
                                 .onTapGesture {
                                     if isMain { onTap(cassette) } else { onSetMain(cassette) }
                                 }
@@ -547,7 +601,7 @@ struct CassetteStackLayer: View {
                                 Image("arrow_cassette")
                                     .resizable().scaledToFit()
                                     .frame(width: arrowWidth)
-                                    .position(x: geo.size.width / 2 - 5, y: geo.size.height / 2)
+                                    .position(x: geo.size.width / 2 + 5, y: geo.size.height / 2 - 5)
                                     .opacity(circleActive ? 1 : 0)
                                     .animation(.easeInOut(duration: 0.25), value: circleActive)
                                     .zIndex(0)
