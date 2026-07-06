@@ -17,9 +17,6 @@ struct CassetteShareScreen: View {
     @State private var musicDuration: Double = 0
     @State private var musicStartTime: Double = 0  // 0.0 ~ 1.0 (비율)
 
-    // 타임라인 드래그
-    @State private var timelineDragOffset: CGFloat = 0
-
     // 내보내기
     @State private var isExporting = false
     @State private var exportProgress: Double = 0
@@ -32,11 +29,18 @@ struct CassetteShareScreen: View {
     @State private var gridScrollOffset: CGFloat = 0
     @State private var animationTimer: Timer? = nil
 
+    // 재생 중 진행 표시
+    @State private var playProgress: CGFloat = 0
+    @State private var progressTimer: Timer? = nil
+
+    // 바 드래그 시작 시점의 musicStartTime 캡처
+    @State private var barDragStartTime: Double? = nil
+
     private let cardWidth: CGFloat = 270
     private let cardHeight: CGFloat = 433
-    private let timelineWidth: CGFloat = 295
-    private let timelineHeight: CGFloat = 72
-    private let filmCellWidth: CGFloat = 48
+    // 음악 윈도우 rect
+    private let windowW: CGFloat = 180
+    private let windowH: CGFloat = 40
 
     // 배경 색상 팔레트 (카세트 색상 + 흑백)
     private let palette: [(hex: String, color: Color)] = [
@@ -58,43 +62,14 @@ struct CassetteShareScreen: View {
                     .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
                     .padding(.top, 34)
 
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 32)
 
-                // ── 타임라인 ──
-                VStack(spacing: 8) {
-                    // 플레이/일시정지 + 시작 시간 표시
-                    HStack(spacing: 12) {
-                        Button {
-                            togglePlayback()
-                        } label: {
-                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(.appBlack)
-                                .frame(width: 32, height: 32)
-                        }
+                // ── 음악 컨트롤 ──
+                musicControl
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
 
-                        Text("start: \(formattedTime(musicDuration * musicStartTime))")
-                            .font(.appMicro)
-                            .foregroundColor(.appDarkGray)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
-
-                    // 필름 스트립 타임라인
-                    filmTimeline
-                        .frame(width: timelineWidth, height: timelineHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(
-                            // 중앙 커서
-                            Rectangle()
-                                .fill(Color.appWhite)
-                                .frame(width: 2, height: timelineHeight + 8)
-                        )
-                }
-                .padding(.horizontal, (UIScreen.main.bounds.width - timelineWidth) / 2)
-
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 24)
 
                 // ── 색상 팔레트 ──
                 HStack(spacing: 12) {
@@ -176,6 +151,7 @@ struct CassetteShareScreen: View {
         return ZStack(alignment: .center) {
             // Z1: 배경색 (palette에서 선택한 색)
             Color(hex: selectedColorHex)
+                .frame(width: cardWidth, height: cardHeight)
 
             // Z2: 이미지 그리드 — 6pt padding, 셀 118×157pt, gap 6pt
             VStack(spacing: 0) {
@@ -197,6 +173,7 @@ struct CassetteShareScreen: View {
                 .animation(.linear(duration: 0.05), value: gridScrollOffset)
                 Spacer()
             }
+            .frame(width: cardWidth, height: cardHeight)
             .clipped()
 
             // Z3: 검정 75% 불투명 rounded rect — 색상 고정, palette 무관
@@ -233,70 +210,67 @@ struct CassetteShareScreen: View {
         return f
     }()
 
-    // MARK: - 필름 타임라인
+    // MARK: - 음악 컨트롤
 
-    private var filmTimeline: some View {
-        let bCuts = cassette.bCuts
-        let totalWidth = CGFloat(max(bCuts.count, 8)) * (filmCellWidth + 2)
+    private var musicControl: some View {
+        let barTotalW: CGFloat = max(windowW * 2, CGFloat(musicDuration / 15.0) * windowW)
+        let maxBarOffset: CGFloat = barTotalW - windowW
+        let barShift: CGFloat = CGFloat(musicStartTime) * maxBarOffset
+        let startSec = musicStartTime * max(0, musicDuration - 15)
+        let endSec = startSec + 15.0
 
-        return ZStack {
-            Color.black
+        return VStack(spacing: 12) {
+            Button { togglePlayback() } label: {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.appBlack)
+                    .frame(width: 32, height: 32)
+            }
 
-            // 필름 스트립
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    ForEach(Array(bCuts.enumerated()), id: \.offset) { _, photo in
-                        filmCell(photo: photo)
-                    }
-                    // 사진이 적으면 빈 셀로 채움
-                    if bCuts.count < 8 {
-                        ForEach(0..<(8 - bCuts.count), id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: filmCellWidth, height: timelineHeight)
-                        }
-                    }
+            ZStack {
+                // 뒤에 깔리는 바 (드래그 가능)
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(Color.appGray.opacity(0.4))
+                        .frame(width: barTotalW, height: 6)
+                        .offset(x: (geo.size.width - windowW) / 2 - barShift)
+                        .frame(maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture()
+                                .onChanged { v in
+                                    if barDragStartTime == nil { barDragStartTime = musicStartTime }
+                                    let startShift = CGFloat(barDragStartTime ?? musicStartTime) * maxBarOffset
+                                    let newShift = min(maxBarOffset, max(0, startShift - v.translation.width))
+                                    musicStartTime = Double(newShift / max(maxBarOffset, 1))
+                                    if isPlaying { seekToStart(); playProgress = 0 }
+                                }
+                                .onEnded { _ in barDragStartTime = nil }
+                        )
                 }
-            }
-            // 드래그로 시작 시간 조정
-            .gesture(
-                DragGesture()
-                    .onChanged { v in
-                        let delta = -v.translation.width
-                        let maxOffset = totalWidth - timelineWidth
-                        let rawOffset = timelineDragOffset + delta
-                        let clamped = min(max(rawOffset, 0), maxOffset)
-                        musicStartTime = Double(clamped / max(maxOffset, 1))
-                        if isPlaying { seekToStart() }
-                    }
-            )
 
-            // 필름 구멍 (위아래)
-            VStack {
-                filmHoles
-                Spacer()
-                filmHoles
+                // stroke rect + 재생 progress (rect 영역 안에서만 표시)
+                ZStack(alignment: .leading) {
+                    // 재생 progress fill — 바와 같은 높이 capsule
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: windowW * playProgress, height: 6)
+
+                    // stroke rect 테두리
+                    Image("rect_round_area")
+                        .resizable()
+                        .frame(width: windowW, height: windowH)
+                }
+                .frame(width: windowW, height: windowH)
+                .clipped()
+                .allowsHitTesting(false)
             }
-            .allowsHitTesting(false)
+            .frame(height: windowH)
+
+            Text("\(formattedTime(startSec))  ~  \(formattedTime(endSec))")
+                .font(.appMicro)
+                .foregroundColor(.appDarkGray)
         }
-    }
-
-    private func filmCell(photo: BCutPhoto) -> some View {
-        SharePhotoCell(photo: photo)
-            .frame(width: filmCellWidth, height: timelineHeight)
-            .clipped()
-    }
-
-    private var filmHoles: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<12, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.black)
-                    .frame(width: 8, height: 6)
-                    .background(RoundedRectangle(cornerRadius: 2).fill(Color.gray.opacity(0.5)))
-            }
-        }
-        .padding(.horizontal, 4)
     }
 
     // MARK: - 오디오
@@ -316,21 +290,27 @@ struct CassetteShareScreen: View {
         if isPlaying {
             stopPlayback()
         } else {
-            seekToStart()
+            let startSeconds = musicStartTime * max(0, musicDuration - 15)
+            player?.currentTime = startSeconds
             player?.play()
             isPlaying = true
+            playProgress = 0
+            startProgressTimer()
             startGridAnimation()
         }
     }
 
     private func seekToStart() {
-        let startSeconds = musicDuration * musicStartTime
+        let startSeconds = musicStartTime * max(0, musicDuration - 15)
         player?.currentTime = startSeconds
+        player?.play()
     }
 
     private func stopPlayback() {
         player?.stop()
         isPlaying = false
+        playProgress = 0
+        stopProgressTimer()
         stopGridAnimation()
         gridScrollOffset = 0
     }
@@ -353,6 +333,26 @@ struct CassetteShareScreen: View {
         animationTimer = nil
     }
 
+    private func startProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            guard isPlaying else { return }
+            let elapsed = (player?.currentTime ?? 0) - musicStartTime * max(0, musicDuration - 15)
+            playProgress = CGFloat(min(1, max(0, elapsed / 15.0)))
+            if playProgress >= 1 {
+                // 15초 구간 끝 → 시작점으로 돌아가서 반복
+                seekToStart()
+                playProgress = 0
+            }
+        }
+    }
+
+    private func stopProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+
+
     private func resolveTrackURL() -> URL? {
         let trackName = cassette.trackName
         let localURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -374,7 +374,7 @@ struct CassetteShareScreen: View {
                 let url = try await ShareVideoRenderer.render(
                     cassette: cassette,
                     backgroundColorHex: selectedColorHex,
-                    musicStartRatio: musicStartTime,
+                    musicStartRatio: musicDuration > 0 ? (musicStartTime * max(0, musicDuration - 15)) / musicDuration : 0,
                     onProgress: { p in
                         await MainActor.run { exportProgress = p }
                     }
