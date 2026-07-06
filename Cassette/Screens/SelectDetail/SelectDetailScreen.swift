@@ -264,7 +264,7 @@ struct SelectDetailScreen: View {
         VStack(spacing: 0) {
             Button {
                 if cassetteData.name.isEmpty {
-                    cassetteData.name = "cassette \(appState.cassettes.count + 1)"
+                    cassetteData.name = "film \(appState.cassettes.count + 1)"
                 }
                 updateKeywords()
                 startLoading()

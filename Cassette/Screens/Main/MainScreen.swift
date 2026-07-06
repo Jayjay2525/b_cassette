@@ -18,6 +18,7 @@ struct MainScreen: View {
     @State private var navigateToDetail = false
     @State private var showNewCassette = false
     @State private var showDeleteAlert = false
+    @State private var showFullToast = false
     @State private var pollingTask: Task<Void, Never>? = nil
 
     let dragThreshold: CGFloat = 160
@@ -188,7 +189,10 @@ struct MainScreen: View {
                         },
                         onSwipeRightChanged: onSwipeRightChanged,
                         onSwipeRightEnded: onSwipeRightEnded,
-                        onAddTap: { showNewCassette = true }
+                        onAddTap: {
+                            if appState.isFull { showFullToast = true }
+                            else { showNewCassette = true }
+                        }
                     )
 
                     // Layer 4: UI
@@ -199,7 +203,10 @@ struct MainScreen: View {
                         mainCassette: circleActive ? (selectedCassette ?? mainCassette) : mainCassette,
                         circleActive: circleActive,
                         onMenuTap: onMenuTap,
-                        onAddTap: { showNewCassette = true },
+                        onAddTap: {
+                            if appState.isFull { showFullToast = true }
+                            else { showNewCassette = true }
+                        },
                         onDeleteCassette: { showDeleteAlert = true },
                         onRetryCassette: {
                             guard let cassette = selectedCassette ?? mainCassette else { return }
@@ -229,6 +236,15 @@ struct MainScreen: View {
                         circleActive = false
                         panelMode = .overall
                         selectedCassette = nil
+                        rotationIndex = 0
+                    }
+                } else if count < oldCount {
+                    // 삭제 후: rotationIndex를 범위 안으로 클램프하고 selectedCassette 즉시 갱신
+                    let newIndex = min(rotationIndex, count - 1)
+                    rotationIndex = newIndex
+                    let next = appState.cassettes[newIndex]
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedCassette = next
                     }
                 } else if count > oldCount, let newest = appState.cassettes.last {
                     rotationIndex = appState.cassettes.count - 1
@@ -248,6 +264,29 @@ struct MainScreen: View {
             .fullScreenCover(isPresented: $showNewCassette) {
                 NewCassetteScreen()
                     .environmentObject(appState)
+            }
+            .onChange(of: showFullToast) {
+                if showFullToast {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        showFullToast = false
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if showFullToast {
+                    Text("cassette limit reached — delete one or upgrade your plan")
+                        .font(.appMicro)
+                        .foregroundColor(.appWhite)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(Color.appDarkGray))
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 48)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.3), value: showFullToast)
+                }
             }
             .onAppear {
                 startPollingIfNeeded()
@@ -548,7 +587,6 @@ struct UILayer: View {
                         .frame(width: 28, height: 28)
                         .opacity(appState.isFull ? 0.3 : 1.0)
                 }
-                .disabled(appState.isFull)
 
                 Button {
                     onMenuTap()

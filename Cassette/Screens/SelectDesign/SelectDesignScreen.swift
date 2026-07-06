@@ -96,6 +96,7 @@ struct SelectDesignScreen: View {
     @State private var confirmedImageItems: [CassetteImageLayer] = []
     @State private var isDesignRestored: Bool = false
     @State private var activeImageLayerID: UUID? = nil
+    @State private var lockedLayerIDs: Set<UUID> = []     // 잠긴 레이어 — 터치 차단
     @State private var orderedLayerIDs: [UUID] = []       // bottom→top z-order
     @State private var imageCreationOrder: [UUID] = []    // for display naming
     @State private var textCreationOrder: [UUID] = []     // for display naming
@@ -227,6 +228,7 @@ struct SelectDesignScreen: View {
                         orderedLayerIDs: $orderedLayerIDs,
                         confirmedImageItems: $confirmedImageItems,
                         confirmedTextItems: $confirmedTextItems,
+                        lockedLayerIDs: $lockedLayerIDs,
                         imageCreationOrder: imageCreationOrder,
                         textCreationOrder: textCreationOrder,
                         cassetteColorName: cassetteData.selectedCassetteColor,
@@ -234,6 +236,7 @@ struct SelectDesignScreen: View {
                             confirmedImageItems.removeAll { $0.id == id }
                             confirmedTextItems.removeAll { $0.id == id }
                             orderedLayerIDs.removeAll { $0 == id }
+                            lockedLayerIDs.remove(id)
                         },
                         onTapBackground: {
                             withAnimation(.easeInOut(duration: 0.25)) { showCassettePanel = true }
@@ -363,7 +366,9 @@ struct SelectDesignScreen: View {
             }
 
             // ── 레이어들 (orderedLayerIDs 순서로 z-order 결정, last=top) ──
-            ForEach(orderedLayerIDs, id: \.self) { id in
+            // 각 레이어에 고유 zIndex 부여 → SwiftUI가 앞 레이어부터 hit test (자연스러운 터치 우선순위)
+            ForEach(Array(orderedLayerIDs.enumerated()), id: \.element) { zPos, id in
+                let isLocked = lockedLayerIDs.contains(id)
                 if let idx = confirmedImageItems.firstIndex(where: { $0.id == id }) {
                     ConfirmedImageLayerView(item: $confirmedImageItems[idx], cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID) {
                         let tapped = confirmedImageItems[idx]
@@ -382,15 +387,16 @@ struct SelectDesignScreen: View {
                         }
                         withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = true }
                     }
-                    .allowsHitTesting(!showTypePopup && !showStickerPanel && !showTextEditor)
+                    .allowsHitTesting(!isLocked && !showTypePopup && !showStickerPanel && !showTextEditor)
+                    .zIndex(14.0 + Double(zPos) * 0.1)
                 } else if let idx = confirmedTextItems.firstIndex(where: { $0.id == id }) {
                     ConfirmedTextLayerView(item: $confirmedTextItems[idx], cassetteFrame: cassetteFrame) {
                         enterTextEdit(at: idx)
                     }
-                    .allowsHitTesting(!showTypePopup && !showTextEditor && !showStickerPanel)
+                    .allowsHitTesting(!isLocked && !showTypePopup && !showTextEditor && !showStickerPanel)
+                    .zIndex(14.0 + Double(zPos) * 0.1)
                 }
             }
-            .zIndex(14)
 
             // ── 카세트 패널 열릴 때 프리뷰 레이어 터치 차단 ──
             if showCassettePanel, cassetteFrame.width > 0 {
@@ -401,7 +407,7 @@ struct SelectDesignScreen: View {
                     .zIndex(15)
             }
 
-            // ── 스티커 프리뷰 레이어 ──
+            // ── 스티커 프리뷰 레이어 — 항상 confirmed 레이어 위 (cassette_multiply 아래) ──
             if let _ = previewImageLayer {
                 ConfirmedImageLayerView(item: Binding(
                     get: { previewImageLayer! },
@@ -409,7 +415,7 @@ struct SelectDesignScreen: View {
                 ), cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
                 .id(previewImageLayer?.id)
                 .allowsHitTesting(!showTypePopup)
-                .zIndex(14)
+                .zIndex(15)
             }
 
             // ── 카세트 표면 굴곡 쉐이딩 오버레이 ──
@@ -523,6 +529,17 @@ struct SelectDesignScreen: View {
 
             // ── 스티커 패널 (인라인, 어두운 오버레이 없음) ──
             if showStickerPanel {
+                // 패널 바깥 탭 → dismiss (선택 없을 때만, 선택 후에는 오버레이 자체를 제거)
+                if previewImageLayer == nil {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.25)) { showStickerPanel = false }
+                        }
+                        .ignoresSafeArea()
+                        .zIndex(19)
+                }
+
                 StickerEditPanel(
                     selectedTab: $stickerTab,
                     selectedPhoto: $selectedStickerPhoto,
@@ -531,7 +548,13 @@ struct SelectDesignScreen: View {
                     selectedLabelName: $selectedLabelName,
                     onSelect: { photo in
                         if let photo {
-                            previewImageLayer = CassetteImageLayer(photo: photo, maskStyle: stickerStyle)
+                            if previewImageLayer != nil {
+                                // 편집 중: photo만 교체, transform 유지
+                                previewImageLayer?.photo = photo
+                                previewImageLayer?.loadedImage = nil
+                            } else {
+                                previewImageLayer = CassetteImageLayer(photo: photo, maskStyle: stickerStyle)
+                            }
                         } else {
                             previewImageLayer = nil
                         }
@@ -679,6 +702,13 @@ struct SelectDesignScreen: View {
             }
         }
         .onChange(of: stickerStyle) { previewImageLayer?.maskStyle = stickerStyle }
+        .onChange(of: stickerTab) {
+            // 탭 전환 시 previewLayer 초기화 — image→label 등 전환 시 이전 값 버림
+            previewImageLayer = nil
+            selectedStickerPhoto = nil
+            selectedStickerName = nil
+            selectedLabelName = nil
+        }
         .onAppear {
             if !isDesignRestored {
                 confirmedImageItems = cassetteData.draftImageLayers
@@ -826,12 +856,16 @@ struct SelectDesignScreen: View {
     @MainActor
     private func renderOnly() async {
         let renderWidth: CGFloat = 1035
+        // orderedLayerIDs 순서대로 정렬해서 z-order 보존
+        let orderedImages = orderedLayerIDs.compactMap { id in
+            confirmedImageItems.first(where: { $0.id == id })
+        }
         let renderView = CassetteCanvasView(
             colorName: cassetteData.selectedCassetteColor,
             width: renderWidth,
             applyMask: false,
             textLayers: confirmedTextItems,
-            imageLayers: confirmedImageItems
+            imageLayers: orderedImages
         )
         let renderer = ImageRenderer(content: renderView)
         renderer.scale = 1.0
@@ -887,68 +921,37 @@ struct CassetteCanvasView: View {
             Image("cassette_\(colorName)").resizable().scaledToFit()
             Image("bolts").resizable().scaledToFit()
 
-            // ── 이미지 레이어 (스타일별 mask) ──
+            // ── 이미지 레이어 — 배열 순서(= orderedLayerIDs 순)대로 개별 렌더 ──
             let s = width / baseWidth
-            let bgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .background }
-            let fgImages = imageLayers.filter { !$0.isLabel && $0.maskStyle == .foreground }
-            let labelImages = imageLayers.filter { $0.isLabel }
-            if !bgImages.isEmpty {
-                ZStack {
-                    ForEach(bgImages) { item in
-                        if let img = item.loadedImage {
-                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: cw, height: 160 * s)
-                                .modifier(CropShapeClip(shape: item.cropShape))
-                                .scaleEffect(item.scale)
-                                .rotationEffect(item.rotation)
-                                .offset(x: item.offset.width * s, y: item.offset.height * s)
-                        }
+            ForEach(imageLayers) { item in
+                if let img = item.loadedImage {
+                    if item.isLabel {
+                        // 레이블: 고정 위치, cassette_mask_center 클립
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: width)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .mask {
+                                Image("cassette_mask_center").resizable().scaledToFit()
+                            }
+                    } else {
+                        // 이미지/스티커: 마스크 종류에 따라 클립
+                        let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
+                        let maskName = item.maskStyle == .background ? "cassette_mask_outside" : "cassette_mask_center"
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: cw, height: 160 * s)
+                            .modifier(CropShapeClip(shape: item.cropShape))
+                            .scaleEffect(item.scale)
+                            .rotationEffect(item.rotation)
+                            .offset(x: item.offset.width * s, y: item.offset.height * s)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .mask {
+                                Image(maskName).resizable().scaledToFit()
+                            }
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_outside").resizable().scaledToFit()
-                }
-            }
-            if !fgImages.isEmpty {
-                ZStack {
-                    ForEach(fgImages) { item in
-                        if let img = item.loadedImage {
-                            let cw: CGFloat = item.cropShape == .rect ? 120 * s : 160 * s
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: cw, height: 160 * s)
-                                .modifier(CropShapeClip(shape: item.cropShape))
-                                .scaleEffect(item.scale)
-                                .rotationEffect(item.rotation)
-                                .offset(x: item.offset.width * s, y: item.offset.height * s)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_center").resizable().scaledToFit()
-                }
-            }
-            // ── 레이블 레이어 (고정 크기/위치, cassette_mask_center로 클립) ──
-            if !labelImages.isEmpty {
-                ZStack {
-                    ForEach(labelImages) { item in
-                        if let img = item.loadedImage {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: width)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask {
-                    Image("cassette_mask_center").resizable().scaledToFit()
                 }
             }
 
@@ -1579,6 +1582,7 @@ struct ConfirmedImageLayerView: View {
     @GestureState private var magnifyDelta: CGFloat = 1.0
     @GestureState private var rotateDelta: Angle = .zero
     @State private var image: UIImage? = nil
+    @State private var hadGestureMove: Bool = false
 
     private var isGestureActive: Bool {
         dragDelta != .zero || magnifyDelta != 1.0 || rotateDelta.radians != 0
@@ -1620,9 +1624,9 @@ struct ConfirmedImageLayerView: View {
                     Color.white
                 }
             }
-            .contentShape(Rectangle())
             .onTapGesture { onTap?() }
             .onAppear { loadImage() }
+            .onChange(of: item.photo.id) { loadImage() }
         } else {
             // 일반 이미지/스티커: 이동/확대/회전 가능
             Group {
@@ -1658,38 +1662,57 @@ struct ConfirmedImageLayerView: View {
             .allowsHitTesting(activeLayerID == nil || activeLayerID == item.id)
             .gesture(
                 DragGesture(minimumDistance: 4)
-                    .updating($dragDelta) { v, state, _ in state = v.translation }
+                    .updating($dragDelta) { v, state, _ in
+                        state = v.translation
+                        DispatchQueue.main.async { hadGestureMove = true }
+                    }
                     .onEnded { v in
                         item.offset.width += v.translation.width
                         item.offset.height += v.translation.height
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { hadGestureMove = false }
                     }
             )
             .simultaneousGesture(
                 MagnificationGesture()
-                    .updating($magnifyDelta) { v, state, _ in state = v }
-                    .onEnded { v in item.scale = max(0.1, item.scale * v) }
+                    .updating($magnifyDelta) { v, state, _ in
+                        state = v
+                        DispatchQueue.main.async { hadGestureMove = true }
+                    }
+                    .onEnded { v in
+                        item.scale = max(0.1, item.scale * v)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { hadGestureMove = false }
+                    }
             )
             .simultaneousGesture(
                 RotationGesture()
-                    .updating($rotateDelta) { v, state, _ in state = v }
-                    .onEnded { v in item.rotation += v }
+                    .updating($rotateDelta) { v, state, _ in
+                        state = v
+                        DispatchQueue.main.async { hadGestureMove = true }
+                    }
+                    .onEnded { v in
+                        item.rotation += v
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { hadGestureMove = false }
+                    }
             )
             .onChange(of: isGestureActive) { _, active in
                 if active {
-                    if activeLayerID == nil { activeLayerID = item.id }
+                    activeLayerID = item.id
                 } else {
-                    if activeLayerID == item.id { activeLayerID = nil }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        if !isGestureActive { activeLayerID = nil }
+                    }
                 }
             }
             .onTapGesture {
+                guard !isGestureActive && !hadGestureMove else { return }
                 if isRegularImage && onTap == nil {
-                    // 프리뷰 중: crop 순환
                     item.cropShape = item.cropShape.next
                 } else {
                     onTap?()
                 }
             }
             .onAppear { loadImage() }
+            .onChange(of: item.photo.id) { loadImage() }
         }
     }
 
@@ -1743,11 +1766,12 @@ struct ConfirmedTextLayerView: View {
             .padding(8)
             .fixedSize()
             .background(GeometryReader { geo in
-                Color.clear.onAppear {
-                    squareSize = max(geo.size.width, geo.size.height)
-                }
+                Color.clear
+                    .onAppear { squareSize = max(geo.size.width, geo.size.height) }
+                    .onChange(of: geo.size) { _, s in squareSize = max(s.width, s.height) }
             })
-            .frame(minWidth: squareSize, minHeight: squareSize)
+            .frame(minWidth: max(squareSize, 80), minHeight: max(squareSize, 80))
+            .padding(.vertical, 20)
             .contentShape(Rectangle())
             .scaleEffect(item.scale * magnifyDelta)
             .rotationEffect(item.rotation + rotateDelta)
@@ -1918,6 +1942,7 @@ struct LayerPanelView: View {
     @Binding var orderedLayerIDs: [UUID]
     @Binding var confirmedImageItems: [CassetteImageLayer]
     @Binding var confirmedTextItems: [CassetteTextLayer]
+    @Binding var lockedLayerIDs: Set<UUID>
     let imageCreationOrder: [UUID]
     let textCreationOrder: [UUID]
     let cassetteColorName: String
@@ -2001,6 +2026,7 @@ struct LayerPanelView: View {
     @ViewBuilder
     private func layerRow(id: UUID, isBackground: Bool) -> some View {
         let isDragging = draggedID == id
+        let isLocked = !isBackground && lockedLayerIDs.contains(id)
         HStack(spacing: 0) {
             // 핸들
             Image("button_handle")
@@ -2098,6 +2124,19 @@ struct LayerPanelView: View {
 
             Spacer()
 
+            if !isBackground {
+                // 자물쇠 버튼 — TODO: "button_lock" / "button_unlock" 이미지로 교체
+                let isLocked = lockedLayerIDs.contains(id)
+                Button {
+                    if isLocked { lockedLayerIDs.remove(id) } else { lockedLayerIDs.insert(id) }
+                } label: {
+                    Image(isLocked ? "button_locked" : "button_unlocked")
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                }
+                .padding(.trailing, 8)
+            }
+
             // X 버튼
             Button {
                 onDeleteLayer(id)
@@ -2110,8 +2149,8 @@ struct LayerPanelView: View {
             .disabled(isBackground)
         }
         .contentShape(Rectangle())
-        .onTapGesture { onTapLayer(id) }
-        .opacity(isDragging ? 0.4 : 1)
+        .onTapGesture { if !isLocked { onTapLayer(id) } }
+        .opacity(isDragging ? 0.4 : isLocked ? 0.5 : 1)
     }
 
     private var backgroundRow: some View {
