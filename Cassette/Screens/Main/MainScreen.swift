@@ -236,6 +236,15 @@ struct MainScreen: View {
                         circleActive = false
                         panelMode = .overall
                         selectedCassette = nil
+                        rotationIndex = 0
+                    }
+                } else if count < oldCount {
+                    // 삭제 후: rotationIndex를 범위 안으로 클램프하고 selectedCassette 즉시 갱신
+                    let newIndex = min(rotationIndex, count - 1)
+                    rotationIndex = newIndex
+                    let next = appState.cassettes[newIndex]
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedCassette = next
                     }
                 } else if count > oldCount, let newest = appState.cassettes.last {
                     rotationIndex = appState.cassettes.count - 1
