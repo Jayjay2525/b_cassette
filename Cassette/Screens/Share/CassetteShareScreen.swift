@@ -17,9 +17,6 @@ struct CassetteShareScreen: View {
     @State private var musicDuration: Double = 0
     @State private var musicStartTime: Double = 0  // 0.0 ~ 1.0 (비율)
 
-    // 타임라인 드래그
-    @State private var timelineDragOffset: CGFloat = 0
-
     // 내보내기
     @State private var isExporting = false
     @State private var exportProgress: Double = 0
@@ -30,13 +27,21 @@ struct CassetteShareScreen: View {
 
     // 카드 그리드 애니메이션
     @State private var gridScrollOffset: CGFloat = 0
+    @State private var gridDragStartOffset: CGFloat = 0
     @State private var animationTimer: Timer? = nil
+
+    // 재생 중 진행 표시
+    @State private var playProgress: CGFloat = 0
+    @State private var progressTimer: Timer? = nil
+
+    // 바 드래그 시작 시점의 musicStartTime 캡처
+    @State private var barDragStartTime: Double? = nil
 
     private let cardWidth: CGFloat = 270
     private let cardHeight: CGFloat = 433
-    private let timelineWidth: CGFloat = 295
-    private let timelineHeight: CGFloat = 72
-    private let filmCellWidth: CGFloat = 48
+    // 음악 윈도우 rect
+    private let windowW: CGFloat = 180
+    private let windowH: CGFloat = 40
 
     // 배경 색상 팔레트 (카세트 색상 + 흑백)
     private let palette: [(hex: String, color: Color)] = [
@@ -48,88 +53,57 @@ struct CassetteShareScreen: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
 
-                // ── 공유 카드 미리보기 ──
-                shareCard
-                    .frame(width: cardWidth, height: cardHeight)
-                    .clipped()
-                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-                    .padding(.top, 34)
+            // ── 공유 카드 미리보기 ──
+            shareCard
+                .frame(width: cardWidth, height: cardHeight)
+                .clipped()
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+                .padding(.top, 44)
 
-                Spacer().frame(height: 20)
+            Spacer().frame(height: 12)
 
-                // ── 타임라인 ──
-                VStack(spacing: 8) {
-                    // 플레이/일시정지 + 시작 시간 표시
-                    HStack(spacing: 12) {
-                        Button {
-                            togglePlayback()
-                        } label: {
-                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(.appBlack)
-                                .frame(width: 32, height: 32)
-                        }
+            // ── 음악 컨트롤 ──
+            musicControl
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
 
-                        Text("start: \(formattedTime(musicDuration * musicStartTime))")
-                            .font(.appMicro)
-                            .foregroundColor(.appDarkGray)
+            Spacer().frame(height: 4)
 
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
-
-                    // 필름 스트립 타임라인
-                    filmTimeline
-                        .frame(width: timelineWidth, height: timelineHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+            // ── 색상 팔레트 ──
+            HStack(spacing: 12) {
+                ForEach(palette, id: \.hex) { item in
+                    let isSelected = selectedColorHex == item.hex
+                    let strokeColor: Color = item.hex == "000000" ? .white : .appBlack
+                    Circle()
+                        .fill(item.color)
+                        .frame(width: 36, height: 36)
                         .overlay(
-                            // 중앙 커서
-                            Rectangle()
-                                .fill(Color.appWhite)
-                                .frame(width: 2, height: timelineHeight + 8)
+                            Circle().strokeBorder(strokeColor, lineWidth: isSelected ? 1 : 0)
                         )
+                        .onTapGesture { selectedColorHex = item.hex }
                 }
-                .padding(.horizontal, (UIScreen.main.bounds.width - timelineWidth) / 2)
-
-                Spacer().frame(height: 20)
-
-                // ── 색상 팔레트 ──
-                HStack(spacing: 12) {
-                    ForEach(palette, id: \.hex) { item in
-                        let isSelected = selectedColorHex == item.hex
-                        let strokeColor: Color = item.hex == "000000" ? .white : .appBlack
-                        Circle()
-                            .fill(item.color)
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Circle().strokeBorder(strokeColor, lineWidth: isSelected ? 1 : 0)
-                            )
-                            .onTapGesture { selectedColorHex = item.hex }
-                    }
-                    // 커스텀 색상 (color picker)
-                    let paletteHexes = palette.map(\.hex)
-                    let customSelected = !paletteHexes.contains(selectedColorHex)
-                    ColorPickerCircle(selectedHex: $selectedColorHex, isCustomSelected: customSelected)
-                }
-                .padding(.horizontal, 24)
-
-                Spacer().frame(height: 24)
-
-                // ── 하단 버튼 ──
-                HStack(spacing: 32) {
-                    exportButton(icon: "square.and.arrow.down", label: "save video") {
-                        exportVideo(shareToInstagram: false)
-                    }
-                    exportButton(icon: "camera.fill", label: "instagram") {
-                        exportVideo(shareToInstagram: true)
-                    }
-                }
-
-                Spacer().frame(height: 32)
+                // 커스텀 색상 (color picker)
+                let paletteHexes = palette.map(\.hex)
+                let customSelected = !paletteHexes.contains(selectedColorHex)
+                ColorPickerCircle(selectedHex: $selectedColorHex, isCustomSelected: customSelected)
             }
+            .padding(.horizontal, 24)
+
+            Spacer().frame(height: 24)
+
+            // ── 하단 버튼 ──
+            HStack(spacing: 32) {
+                exportButton(icon: "button_video", label: "save video") {
+                    exportVideo(shareToInstagram: false)
+                }
+                exportButton(icon: "button_instagram", label: "instagram") {
+                    exportVideo(shareToInstagram: true)
+                }
+            }
+
+            Spacer().frame(height: 32)
         }
         .background(Color.appBackground)
         .presentationDetents([.large])
@@ -176,28 +150,42 @@ struct CassetteShareScreen: View {
         return ZStack(alignment: .center) {
             // Z1: 배경색 (palette에서 선택한 색)
             Color(hex: selectedColorHex)
+                .frame(width: cardWidth, height: cardHeight)
 
             // Z2: 이미지 그리드 — 6pt padding, 셀 118×157pt, gap 6pt
-            VStack(spacing: 0) {
-                LazyVGrid(columns: columns, spacing: gap) {
-                    ForEach(Array((bCuts.isEmpty ? [nil] : bCuts.map { Optional($0) }).enumerated()), id: \.offset) { _, photo in
-                        Group {
-                            if let photo {
-                                SharePhotoCell(photo: photo)
-                            } else {
-                                Color.gray.opacity(0.3)
-                            }
+            let rows = CGFloat((bCuts.count + 1) / 2)
+            let totalGridH = rows * cellH + (rows - 1) * gap + gap * 2
+            let maxScrollable = max(0, totalGridH - cardHeight)
+            LazyVGrid(columns: columns, spacing: gap) {
+                ForEach(Array((bCuts.isEmpty ? [nil] : bCuts.map { Optional($0) }).enumerated()), id: \.offset) { _, photo in
+                    Group {
+                        if let photo {
+                            SharePhotoCell(photo: photo)
+                        } else {
+                            Color.gray.opacity(0.3)
                         }
-                        .frame(width: cellW, height: cellH)
-                        .clipped()
                     }
+                    .frame(width: cellW, height: cellH)
+                    .clipped()
                 }
-                .padding(gap)
-                .offset(y: -gridScrollOffset)
-                .animation(.linear(duration: 0.05), value: gridScrollOffset)
-                Spacer()
             }
+            .padding(gap)
+            .frame(width: cardWidth, height: totalGridH, alignment: .top)
+            .offset(y: -gridScrollOffset)
+            .animation(.linear(duration: 0.05), value: gridScrollOffset)
+            .frame(width: cardWidth, height: cardHeight, alignment: .top)
             .clipped()
+            .gesture(
+                DragGesture()
+                    .onChanged { v in
+                        guard !isPlaying else { return }
+                        let newOffset = gridDragStartOffset - v.translation.height
+                        gridScrollOffset = min(maxScrollable, max(0, newOffset))
+                    }
+                    .onEnded { _ in
+                        gridDragStartOffset = gridScrollOffset
+                    }
+            )
 
             // Z3: 검정 75% 불투명 rounded rect — 색상 고정, palette 무관
             RoundedRectangle(cornerRadius: 16)
@@ -210,8 +198,8 @@ struct CassetteShareScreen: View {
                     .font(.appMicro)
                     .foregroundColor(.white.opacity(0.6))
 
-                CassetteImageView(cassette: cassette, width: 130)
-                    .frame(width: 130)
+                CassetteImageView(cassette: cassette, width: 156)
+                    .frame(width: 156)
 
                 Text(cassette.name)
                     .font(.appBody)
@@ -233,70 +221,67 @@ struct CassetteShareScreen: View {
         return f
     }()
 
-    // MARK: - 필름 타임라인
+    // MARK: - 음악 컨트롤
 
-    private var filmTimeline: some View {
-        let bCuts = cassette.bCuts
-        let totalWidth = CGFloat(max(bCuts.count, 8)) * (filmCellWidth + 2)
+    private var musicControl: some View {
+        let barTotalW: CGFloat = max(windowW * 2, CGFloat(musicDuration / 15.0) * windowW)
+        let maxBarOffset: CGFloat = barTotalW - windowW
+        let barShift: CGFloat = CGFloat(musicStartTime) * maxBarOffset
+        let startSec = musicStartTime * max(0, musicDuration - 15)
+        let endSec = startSec + 15.0
 
-        return ZStack {
-            Color.black
+        return VStack(spacing: 12) {
+            Button { togglePlayback() } label: {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.appBlack)
+                    .frame(width: 32, height: 32)
+            }
 
-            // 필름 스트립
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    ForEach(Array(bCuts.enumerated()), id: \.offset) { _, photo in
-                        filmCell(photo: photo)
-                    }
-                    // 사진이 적으면 빈 셀로 채움
-                    if bCuts.count < 8 {
-                        ForEach(0..<(8 - bCuts.count), id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: filmCellWidth, height: timelineHeight)
-                        }
-                    }
+            ZStack {
+                // 뒤에 깔리는 바 (드래그 가능)
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(Color.appGray.opacity(0.4))
+                        .frame(width: barTotalW, height: 6)
+                        .offset(x: (geo.size.width - windowW) / 2 - barShift)
+                        .frame(maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture()
+                                .onChanged { v in
+                                    if barDragStartTime == nil { barDragStartTime = musicStartTime }
+                                    let startShift = CGFloat(barDragStartTime ?? musicStartTime) * maxBarOffset
+                                    let newShift = min(maxBarOffset, max(0, startShift - v.translation.width))
+                                    musicStartTime = Double(newShift / max(maxBarOffset, 1))
+                                    if isPlaying { seekToStart(); playProgress = 0 }
+                                }
+                                .onEnded { _ in barDragStartTime = nil }
+                        )
                 }
-            }
-            // 드래그로 시작 시간 조정
-            .gesture(
-                DragGesture()
-                    .onChanged { v in
-                        let delta = -v.translation.width
-                        let maxOffset = totalWidth - timelineWidth
-                        let rawOffset = timelineDragOffset + delta
-                        let clamped = min(max(rawOffset, 0), maxOffset)
-                        musicStartTime = Double(clamped / max(maxOffset, 1))
-                        if isPlaying { seekToStart() }
-                    }
-            )
 
-            // 필름 구멍 (위아래)
-            VStack {
-                filmHoles
-                Spacer()
-                filmHoles
+                // stroke rect + 재생 progress (rect 영역 안에서만 표시)
+                ZStack(alignment: .leading) {
+                    // 재생 progress fill — 바와 같은 높이 capsule
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: windowW * playProgress, height: 6)
+
+                    // stroke rect 테두리
+                    Image("rect_round_area")
+                        .resizable()
+                        .frame(width: windowW, height: windowH)
+                }
+                .frame(width: windowW, height: windowH)
+                .clipped()
+                .allowsHitTesting(false)
             }
-            .allowsHitTesting(false)
+            .frame(height: windowH)
+
+            Text("\(formattedTime(startSec))  ~  \(formattedTime(endSec))")
+                .font(.appMicro)
+                .foregroundColor(.appDarkGray)
         }
-    }
-
-    private func filmCell(photo: BCutPhoto) -> some View {
-        SharePhotoCell(photo: photo)
-            .frame(width: filmCellWidth, height: timelineHeight)
-            .clipped()
-    }
-
-    private var filmHoles: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<12, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.black)
-                    .frame(width: 8, height: 6)
-                    .background(RoundedRectangle(cornerRadius: 2).fill(Color.gray.opacity(0.5)))
-            }
-        }
-        .padding(.horizontal, 4)
     }
 
     // MARK: - 오디오
@@ -316,35 +301,53 @@ struct CassetteShareScreen: View {
         if isPlaying {
             stopPlayback()
         } else {
-            seekToStart()
+            let startSeconds = musicStartTime * max(0, musicDuration - 15)
+            player?.currentTime = startSeconds
             player?.play()
             isPlaying = true
+            playProgress = 0
+            startProgressTimer()
             startGridAnimation()
         }
     }
 
     private func seekToStart() {
-        let startSeconds = musicDuration * musicStartTime
+        let startSeconds = musicStartTime * max(0, musicDuration - 15)
         player?.currentTime = startSeconds
+        player?.play()
     }
 
     private func stopPlayback() {
         player?.stop()
         isPlaying = false
+        playProgress = 0
+        stopProgressTimer()
         stopGridAnimation()
-        gridScrollOffset = 0
+        gridDragStartOffset = gridScrollOffset
     }
 
     private func startGridAnimation() {
         let bCuts = cassette.bCuts
-        guard bCuts.count > 0 else { return }
-        let cellH: CGFloat = cardWidth / 2 * (4.0 / 3.0)
-        let maxScroll = CGFloat(bCuts.count / 2) * (cellH + 2)
+        guard bCuts.count > 0, musicDuration > 0 else { return }
+
+        let cellW: CGFloat = 118
+        let cellH: CGFloat = cellW * 4 / 3
+        let gap: CGFloat = 6
+        let rows = CGFloat((bCuts.count + 1) / 2)
+        let totalGridH = rows * cellH + (rows - 1) * gap + gap * 2
+        let maxScrollable = max(0, totalGridH - cardHeight)
+
+        let startOffset = gridScrollOffset
+        // 15초 동안 스크롤할 거리 = 전체 그리드 높이 * (15 / 음악 전체 길이)
+        let scrollDistance = totalGridH * CGFloat(15.0 / musicDuration)
+        let endOffset = min(maxScrollable, startOffset + scrollDistance)
+
+        // 시작점이 이미 끝에 닿아있으면 애니메이션 없음
+        guard startOffset < maxScrollable else { return }
 
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
             guard isPlaying else { return }
-            gridScrollOffset += 0.8
-            if gridScrollOffset > maxScroll { gridScrollOffset = 0 }
+            gridScrollOffset = startOffset + (endOffset - startOffset) * playProgress
         }
     }
 
@@ -352,6 +355,26 @@ struct CassetteShareScreen: View {
         animationTimer?.invalidate()
         animationTimer = nil
     }
+
+    private func startProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            guard isPlaying else { return }
+            let elapsed = (player?.currentTime ?? 0) - musicStartTime * max(0, musicDuration - 15)
+            playProgress = CGFloat(min(1, max(0, elapsed / 15.0)))
+            if playProgress >= 1 {
+                // 15초 구간 끝 → 시작점으로 돌아가서 반복
+                seekToStart()
+                playProgress = 0
+            }
+        }
+    }
+
+    private func stopProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+
 
     private func resolveTrackURL() -> URL? {
         let trackName = cassette.trackName
@@ -374,7 +397,7 @@ struct CassetteShareScreen: View {
                 let url = try await ShareVideoRenderer.render(
                     cassette: cassette,
                     backgroundColorHex: selectedColorHex,
-                    musicStartRatio: musicStartTime,
+                    musicStartRatio: musicDuration > 0 ? (musicStartTime * max(0, musicDuration - 15)) / musicDuration : 0,
                     onProgress: { p in
                         await MainActor.run { exportProgress = p }
                     }
@@ -445,12 +468,13 @@ struct CassetteShareScreen: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 ZStack {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.appWhite)
-                        .frame(width: 56, height: 56)
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(.appBlack)
+                        .frame(width: 48, height: 48)
+                    Image(icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
                 }
                 Text(label)
                     .font(.appMicro)

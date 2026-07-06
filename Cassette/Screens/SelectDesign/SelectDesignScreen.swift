@@ -408,12 +408,12 @@ struct SelectDesignScreen: View {
             }
 
             // ── 스티커 프리뷰 레이어 — 항상 confirmed 레이어 위 (cassette_multiply 아래) ──
-            if let _ = previewImageLayer {
+            if let layer = previewImageLayer {
                 ConfirmedImageLayerView(item: Binding(
-                    get: { previewImageLayer! },
+                    get: { previewImageLayer ?? layer },
                     set: { previewImageLayer = $0 }
                 ), cassetteFrame: cassetteFrame, activeLayerID: $activeImageLayerID)
-                .id(previewImageLayer?.id)
+                .id(layer.id)
                 .allowsHitTesting(!showTypePopup)
                 .zIndex(15)
             }
@@ -964,6 +964,13 @@ struct CassetteCanvasView: View {
                     .rotationEffect(item.rotation)
                     .offset(x: item.offset.width * s, y: item.offset.height * s)
             }
+
+            // 표면 굴곡 쉐이딩 — tape/cassette 이미지 위에 합성되므로 투명 배경 문제 없음
+            Image("cassette_multiply")
+                .resizable()
+                .scaledToFit()
+                .blendMode(.plusDarker)
+                .allowsHitTesting(false)
         }
         .frame(width: width)
         .modifier(CassetteMaskModifier(width: width, apply: applyMask))

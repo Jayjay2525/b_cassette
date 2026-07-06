@@ -16,8 +16,8 @@ enum ShareVideoRenderer {
         let outputURL = tempDir.appendingPathComponent("\(cassette.id.uuidString)_share.mp4")
         try? FileManager.default.removeItem(at: outputURL)
 
-        // 720×1280 — Instagram Stories 충분한 품질, 1080p 대비 메모리 절반
-        let videoSize = CGSize(width: 720, height: 1280)
+        // 1080×1920 — Instagram Stories 최대 권장 해상도
+        let videoSize = CGSize(width: 1080, height: 1920)
         let duration: Double = 15.0  // 15초
 
         // AVAssetWriter 설정
@@ -28,7 +28,7 @@ enum ShareVideoRenderer {
             AVVideoWidthKey: Int(videoSize.width),
             AVVideoHeightKey: Int(videoSize.height),
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: 4_000_000,  // 4 Mbps
+                AVVideoAverageBitRateKey: 8_000_000,  // 8 Mbps
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
             ],
         ]
@@ -50,6 +50,7 @@ enum ShareVideoRenderer {
         var audioInput: AVAssetWriterInput? = nil
         var audioReader: AVAssetReader? = nil
         var audioTrackOutput: AVAssetReaderTrackOutput? = nil
+        var audioStartSecs: Double = 0
 
         if let audioURL = resolveTrackURL(for: cassette) {
             let audioAsset = AVURLAsset(url: audioURL)
@@ -63,6 +64,7 @@ enum ShareVideoRenderer {
                 let assetDuration = try await audioAsset.load(.duration)
                 let totalSecs = CMTimeGetSeconds(assetDuration)
                 let startSecs = totalSecs * musicStartRatio
+                audioStartSecs = startSecs
                 let startTime = CMTime(seconds: startSecs, preferredTimescale: 44100)
                 let endTime = CMTime(seconds: min(startSecs + duration, totalSecs), preferredTimescale: 44100)
 
@@ -126,7 +128,7 @@ enum ShareVideoRenderer {
         let bgColorBox = UncheckedSendableBox(bgColor)
 
         // 비디오와 오디오를 동시에 write (pre-render 불필요 — 오디오 동시 공급으로 isReadyForMoreMediaData 정상 동작)
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             let group = DispatchGroup()
 
             // 비디오: frame-by-frame 렌더 + write
@@ -137,7 +139,7 @@ enum ShareVideoRenderer {
                         Thread.sleep(forTimeInterval: 0.001)
                     }
                     let presentationTime = CMTimeMultiply(frameDuration, multiplier: Int32(frameIndex))
-                    let scrollY = CGFloat(frameIndex) / CGFloat(totalFrames) * maxScroll
+                    let scrollY = CGFloat(frameIndex) / CGFloat(totalFrames) * maxScroll * 0.5
                     let frameImage = Self.makeFrameImage(
                         size: videoSize,
                         bgColor: bgColorBox.value,
@@ -170,7 +172,19 @@ enum ShareVideoRenderer {
                         }
                         if audioReaderBox.value.status == .reading,
                            let sampleBuffer = audioTrackOutputBox.value.copyNextSampleBuffer() {
-                            audioInputBox.value.append(sampleBuffer)
+                            // presentationTime을 0 기준으로 재조정
+                            let originalTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                            let adjustedTime = CMTimeSubtract(originalTime, CMTime(seconds: audioStartSecs, preferredTimescale: originalTime.timescale))
+                            var timingInfo = CMSampleTimingInfo(
+                                duration: CMSampleBufferGetDuration(sampleBuffer),
+                                presentationTimeStamp: adjustedTime,
+                                decodeTimeStamp: .invalid
+                            )
+                            var adjustedBuffer: CMSampleBuffer?
+                            CMSampleBufferCreateCopyWithNewTiming(allocator: nil, sampleBuffer: sampleBuffer, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleBufferOut: &adjustedBuffer)
+                            if let adjusted = adjustedBuffer {
+                                audioInputBox.value.append(adjusted)
+                            }
                         } else {
                             print("[ShareVideoRenderer] 오디오 완료 (reader status: \(audioReaderBox.value.status.rawValue))")
                             audioInputBox.value.markAsFinished()
@@ -232,7 +246,24 @@ enum ShareVideoRenderer {
                 let y = padding + CGFloat(row) * (cellH + gap)
                 let cellRect = CGRect(x: x, y: y, width: cellW, height: cellH)
                 if let img = photos[idx] {
-                    img.draw(in: cellRect)
+                    // aspectFill + clip (SwiftUI .clipped()와 동일)
+                    let imgRatio = img.size.width / img.size.height
+                    let cellRatio = cellW / cellH
+                    let drawW: CGFloat
+                    let drawH: CGFloat
+                    if imgRatio > cellRatio {
+                        drawH = cellH
+                        drawW = cellH * imgRatio
+                    } else {
+                        drawW = cellW
+                        drawH = cellW / imgRatio
+                    }
+                    let drawX = x + (cellW - drawW) / 2
+                    let drawY = y + (cellH - drawH) / 2
+                    UIGraphicsGetCurrentContext()?.saveGState()
+                    UIRectClip(cellRect)
+                    img.draw(in: CGRect(x: drawX, y: drawY, width: drawW, height: drawH))
+                    UIGraphicsGetCurrentContext()?.restoreGState()
                 } else {
                     UIColor.gray.withAlphaComponent(0.3).setFill()
                     UIRectFill(cellRect)
@@ -245,40 +276,35 @@ enum ShareVideoRenderer {
     // MARK: - 정적 오버레이 합성 (카드 레이아웃과 동일: Z3 검정 75% + Z4 카세트 이미지/텍스트)
 
     private static func makeStaticOverlay(cassette: CassetteModel, videoSize: CGSize, bgColor: UIColor) -> UIImage? {
-        // 카드 기준 비율 그대로 유지 (가로/세로 각각 스케일)
-        let scaleX = videoSize.width / 270
-        let scaleY = videoSize.height / 433
+        // 카드(270×433) → 비디오(1080×1920) 비율이 동일하므로 scaleX 하나로 통일
+        let scale = videoSize.width / 270
         UIGraphicsBeginImageContextWithOptions(videoSize, false, 1.0)
         defer { UIGraphicsEndImageContext() }
         guard UIGraphicsGetCurrentContext() != nil else { return nil }
 
-        // Z3: 검정 75% rounded rect (카드 비율 204×195 그대로)
-        let overlayW = 204 * scaleX
-        let overlayH = 195 * scaleY
+        // Z3: 검정 75% rounded rect — 카드 기준 204×195, 세로 중앙
+        let overlayW = 204 * scale
+        let overlayH = 195 * scale
         let overlayRect = CGRect(
             x: (videoSize.width - overlayW) / 2,
             y: (videoSize.height - overlayH) / 2,
             width: overlayW, height: overlayH
         )
         UIColor.black.withAlphaComponent(0.75).setFill()
-        UIBezierPath(roundedRect: overlayRect, cornerRadius: 16 * scaleX).fill()
+        UIBezierPath(roundedRect: overlayRect, cornerRadius: 16 * scale).fill()
 
         // Z4 레이아웃: "b_cassette" → 카세트 이미지 → 카세트 이름 → 날짜
-        var curY = overlayRect.minY + 8 * scaleY
+        // 1.2배 크기 적용
+        let fontMicro = UIFont(name: "CutiveMono-Regular", size: 10 * scale * 1.2) ?? UIFont.systemFont(ofSize: 10 * scale * 1.2)
+        let fontBody  = UIFont(name: "CutiveMono-Regular", size: 12 * scale * 1.2) ?? UIFont.systemFont(ofSize: 12 * scale * 1.2)
+        let gap = 4 * scale * 1.2
 
-        let fontMicro = UIFont(name: "CutiveMono-Regular", size: 15 * scaleX) ?? UIFont.systemFont(ofSize: 15 * scaleX)
-        let fontBody  = UIFont(name: "CutiveMono-Regular", size: 18 * scaleX) ?? UIFont.systemFont(ofSize: 18 * scaleX)
-
-        // "b_cassette" 레이블
         let appStr = NSAttributedString(string: "b_cassette", attributes: [
             .font: fontMicro,
             .foregroundColor: UIColor.white.withAlphaComponent(0.6),
         ])
         let appSz = appStr.size()
-        appStr.draw(at: CGPoint(x: (videoSize.width - appSz.width) / 2, y: curY))
-        curY += appSz.height + 4 * scaleY
 
-        // 카세트 디자인 이미지 (카드와 동일하게 130pt 기준 scaleX)
         let cassetteImage: UIImage?
         if let path = cassette.customImagePath {
             let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -287,36 +313,50 @@ enum ShareVideoRenderer {
         } else {
             cassetteImage = UIImage(named: cassette.design.imageName)
         }
-        let imgW = 130 * scaleX
-        let imgH: CGFloat
-        if let img = cassetteImage {
-            imgH = imgW * img.size.height / img.size.width
-            img.draw(in: CGRect(x: (videoSize.width - imgW) / 2, y: curY, width: imgW, height: imgH))
-        } else {
-            imgH = 60 * scaleY
-        }
-        curY += imgH + 4 * scaleY
+        let imgW = 130 * scale * 1.2
+        let imgH: CGFloat = {
+            if let img = cassetteImage { return imgW * img.size.height / img.size.width }
+            return 60 * scale * 1.2
+        }()
 
-        // 카세트 이름
         let nameStr = NSAttributedString(string: cassette.name, attributes: [
             .font: fontBody,
             .foregroundColor: UIColor.white,
         ])
         let nameSz = nameStr.size()
+
+        let fmt = DateFormatter(); fmt.dateFormat = "yyyy.MM.dd"
+        let dateStr: NSAttributedString? = cassette.photoDateRange.map {
+            NSAttributedString(
+                string: "\(fmt.string(from: $0.oldest)) — \(fmt.string(from: $0.latest))",
+                attributes: [.font: fontMicro, .foregroundColor: UIColor.white.withAlphaComponent(0.7)]
+            )
+        }
+        let dateSz = dateStr?.size() ?? .zero
+
+        // 전체 콘텐츠 높이 계산 후 overlayRect 내 세로 중앙 정렬
+        let totalContentH = appSz.height + gap
+            + imgH + gap
+            + nameSz.height + gap
+            + (dateStr != nil ? dateSz.height : 0)
+        var curY = overlayRect.midY - totalContentH / 2
+
+        // "b_cassette"
+        appStr.draw(at: CGPoint(x: (videoSize.width - appSz.width) / 2, y: curY))
+        curY += appSz.height + gap
+
+        // 카세트 디자인 이미지
+        if let img = cassetteImage {
+            img.draw(in: CGRect(x: (videoSize.width - imgW) / 2, y: curY, width: imgW, height: imgH))
+        }
+        curY += imgH + gap
+
+        // 카세트 이름
         nameStr.draw(at: CGPoint(x: (videoSize.width - nameSz.width) / 2, y: curY))
-        curY += nameSz.height + 4 * scaleY
+        curY += nameSz.height + gap
 
         // 날짜
-        if let range = cassette.photoDateRange {
-            let fmt = DateFormatter(); fmt.dateFormat = "yyyy.MM.dd"
-            let dateStr = NSAttributedString(
-                string: "\(fmt.string(from: range.oldest)) — \(fmt.string(from: range.latest))",
-                attributes: [
-                    .font: fontMicro,
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.7),
-                ]
-            )
-            let dateSz = dateStr.size()
+        if let dateStr {
             dateStr.draw(at: CGPoint(x: (videoSize.width - dateSz.width) / 2, y: curY))
         }
 

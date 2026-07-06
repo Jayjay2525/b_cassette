@@ -169,7 +169,11 @@ struct CassetteDetailScreen: View {
                 .frame(width: 251, height: 36, alignment: .center)
                 .background(Color.appWhite)
 
-            Button { showShare = true } label: {
+            Button {
+                player?.pause()
+                isPlaying = false
+                showShare = true
+            } label: {
                 Image("button_share")
                     .resizable()
                     .scaledToFit()
