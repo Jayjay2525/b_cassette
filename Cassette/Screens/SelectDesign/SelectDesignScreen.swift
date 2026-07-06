@@ -2074,7 +2074,7 @@ struct LayerPanelView: View {
             // 레이어 타입별 콘텐츠
             switch layerInfo(for: id) {
             case .image(let n, let thumb):
-                Text("image \(n)")
+                Text("\(String(localized: "image")) \(n)")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .lineLimit(1)
@@ -2087,7 +2087,7 @@ struct LayerPanelView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 2))
                 }
             case .sticker(let n, let thumb):
-                Text("sticker \(n)")
+                Text("\(String(localized: "sticker")) \(n)")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .lineLimit(1)
@@ -2100,7 +2100,7 @@ struct LayerPanelView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 2))
                 }
             case .label(let n, let thumb):
-                Text("label \(n)")
+                Text("\(String(localized: "label")) \(n)")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .lineLimit(1)
@@ -2113,7 +2113,7 @@ struct LayerPanelView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 2))
                 }
             case .text(let n, let content):
-                Text("text \(n)")
+                Text("\(String(localized: "text")) \(n)")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .lineLimit(1)

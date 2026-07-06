@@ -8,6 +8,7 @@ enum ShareVideoRenderer {
         cassette: CassetteModel,
         backgroundColorHex: String,
         musicStartRatio: Double,
+        gridStartOffset: CGFloat,
         onProgress: @escaping (Double) async -> Void
     ) async throws -> URL {
 
@@ -120,7 +121,15 @@ enum ShareVideoRenderer {
         let frameDuration = CMTimeMake(value: 1, timescale: Int32(fps))
         print("[ShareVideoRenderer] 총 \(totalFrames)프레임 렌더 예정")
 
-        let maxScroll = max(0, (gridStrip?.size.height ?? videoSize.height) - videoSize.height)
+        // 실제 콘텐츠(사진만 있는 행)가 끝나는 지점으로 스크롤을 제한
+        let gridScale = videoSize.width / 270
+        let gridCellH = 118 * gridScale * 4 / 3
+        let gridGap = 6 * gridScale
+        let gridPadding = 6 * gridScale
+        let photoRows = Int(ceil(Double(bCuts.count) / 2.0))
+        let contentMaxScroll = max(0, gridPadding + CGFloat(photoRows) * (gridCellH + gridGap) - videoSize.height)
+        // 장수에 관계없이 고정 스크롤 거리 (약 8~10장 기준 속도)
+        let scrollTarget = min(800.0, contentMaxScroll)
         let gridStripBox = UncheckedSendableBox(gridStrip)
         let staticOverlayBox = UncheckedSendableBox(staticOverlay)
         let videoInputBox = UncheckedSendableBox(videoInput)
@@ -139,7 +148,7 @@ enum ShareVideoRenderer {
                         Thread.sleep(forTimeInterval: 0.001)
                     }
                     let presentationTime = CMTimeMultiply(frameDuration, multiplier: Int32(frameIndex))
-                    let scrollY = CGFloat(frameIndex) / CGFloat(totalFrames) * maxScroll * 0.5
+                    let scrollY = min(gridStartOffset + CGFloat(frameIndex) / CGFloat(totalFrames) * scrollTarget, contentMaxScroll)
                     let frameImage = Self.makeFrameImage(
                         size: videoSize,
                         bgColor: bgColorBox.value,
@@ -229,7 +238,10 @@ enum ShareVideoRenderer {
         let cellH = cellW * 4 / 3   // 3:4 비율
         let gap = 6 * scale
         let padding = 6 * scale
-        let rows = Int(ceil(Double(photos.count) / Double(cols))) + 1
+        let photoRows = Int(ceil(Double(photos.count) / Double(cols)))
+        // 스크롤 여유가 생길 만큼 충분한 사진이 있을 때만 +1 row 추가
+        let extraRow = (CGFloat(photoRows) * (cellH + gap) + padding > videoSize.height) ? 1 : 0
+        let rows = photoRows + extraRow
         let stripH = padding + CGFloat(rows) * (cellH + gap)
 
         UIGraphicsBeginImageContextWithOptions(CGSize(width: videoSize.width, height: stripH), false, 1.0)
@@ -241,7 +253,8 @@ enum ShareVideoRenderer {
 
         for row in 0..<rows {
             for col in 0..<cols {
-                let idx = (row * cols + col) % photos.count
+                let idx = row * cols + col
+                guard idx < photos.count else { continue }
                 let x = leftMargin + CGFloat(col) * (cellW + gap)
                 let y = padding + CGFloat(row) * (cellH + gap)
                 let cellRect = CGRect(x: x, y: y, width: cellW, height: cellH)
@@ -475,6 +488,7 @@ enum ShareVideoRenderer {
 private final class UncheckedSendableBox<T>: @unchecked Sendable {
     let value: T
     init(_ value: T) { self.value = value }
+    @_optimize(none) deinit {}
 }
 
 private extension UIColor {

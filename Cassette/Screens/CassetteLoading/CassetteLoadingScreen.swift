@@ -18,7 +18,7 @@ struct CassetteLoadingOverlay: View {
                     .frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
                     .padding(.bottom, 48)
 
-                Text("winding your tape\(String(repeating: ".", count: dotCount + 1))")
+                Text("\(String(localized: "winding your tape"))\(String(repeating: ".", count: dotCount + 1))")
                     .font(.appBody)
                     .foregroundColor(.appBlack)
                     .multilineTextAlignment(.center)

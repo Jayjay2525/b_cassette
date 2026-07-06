@@ -67,7 +67,7 @@ struct CassetteDetailScreen: View {
                     .padding(.top, 16)
 
                 // 3. Photo count info
-                Text("\(cassette.photos.count) photos")
+                Text(String(format: NSLocalizedString("%d photos", comment: ""), cassette.photos.count))
                     .font(.appMicro)
                     .foregroundColor(.appDarkGray)
                     .padding(.top, 8)
@@ -90,7 +90,7 @@ struct CassetteDetailScreen: View {
                     .padding(.top, 32)
 
                 // 8. Days left
-                Text(cassette.isExpired ? "expired" : "\(cassette.daysLeft) days left")
+                Text(cassette.isExpired ? "expired" : String(format: NSLocalizedString("%d days left", comment: ""), cassette.daysLeft))
                     .font(.appBody)
                     .foregroundColor(cassette.isExpired ? .appDarkGray : .appAccent)
                     .frame(maxWidth: .infinity, alignment: .center)

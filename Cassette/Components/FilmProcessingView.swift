@@ -22,7 +22,7 @@ struct FilmProcessingView: View {
                 .padding(.bottom, 48)
 
             // "film processing..."
-            Text("film processing\(dots)")
+            Text("\(String(localized: "film processing"))\(dots)")
                 .font(.appBody)
                 .foregroundColor(.appBlack)
                 .multilineTextAlignment(.center)

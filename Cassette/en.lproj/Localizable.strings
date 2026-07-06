@@ -1,0 +1,98 @@
+// MARK: - Main Screen
+"no cassettes yet!" = "no cassettes yet!";
+"add a new cassette" = "add a new cassette";
+"with your b-cuts" = "with your b-cuts";
+"cassette limit reached — delete one or upgrade your plan" = "cassette limit reached — delete one or upgrade your plan";
+"delete cassette?" = "delete cassette?";
+"This cassette will be permanently deleted. This action can't be undone." = "This cassette will be permanently deleted. This action can't be undone.";
+"delete" = "delete";
+"cancel" = "cancel";
+"help" = "help";
+"retry" = "retry";
+"generating..." = "generating...";
+"generation failed" = "generation failed";
+"expired" = "expired";
+"terms of service" = "terms of service";
+
+// MARK: - Cassette Detail
+"Delete Cassette" = "Delete Cassette";
+"\"%@\" and all its photos will be permanently deleted. This cannot be undone." = "\"%@\" and all its photos will be permanently deleted. This cannot be undone.";
+"Delete" = "Delete";
+"Cancel" = "Cancel";
+"restore photos" = "restore photos";
+"open photos" = "open photos";
+"photos deleted within 30 days can be recovered.\ngo to Photos → Recently Deleted to restore them." = "photos deleted within 30 days can be recovered.\ngo to Photos → Recently Deleted to restore them.";
+"revert" = "revert";
+"no b-cuts" = "no b-cuts";
+"%d photos" = "%d photos";
+"%d days left" = "%d days left";
+
+// MARK: - Share Screen
+"save video" = "save video";
+"instagram" = "instagram";
+"rendering..." = "rendering...";
+
+// MARK: - New Cassette / Select
+"make a cassette" = "make a cassette";
+"make a film" = "make a film";
+"select b-cuts" = "select b-cuts";
+"select types" = "select types";
+"loading photos..." = "loading photos...";
+"select at least 5 images!" = "select at least 5 images!";
+"next" = "next";
+"done" = "done";
+"skip" = "skip";
+"skip for now" = "skip for now";
+"leave" = "leave";
+"Leave without saving?" = "Leave without saving?";
+"Your cassette won't be saved." = "Your cassette won't be saved.";
+
+// MARK: - Cassette Types
+"normal cassette" = "normal cassette";
+"special cassette" = "special cassette";
+"cassette type" = "cassette type";
+"cassette background" = "cassette background";
+"b-cut from film" = "b-cut from film";
+"cassette is made by ai with film" = "cassette is made by ai with film";
+"films are made out of your b-cuts" = "films are made out of your b-cuts";
+"fitting music from\nai generation" = "fitting music from\nai generation";
+"random music from\nour library tracks" = "random music from\nour library tracks";
+"coming soon" = "coming soon";
+"coming\nsoon" = "coming\nsoon";
+"free" = "free";
+"free (3/3)" = "free (3/3)";
+
+// MARK: - Select Design
+"untitled" = "untitled";
+"describe the film" = "describe the film";
+"image" = "image";
+"text" = "text";
+"sticker" = "sticker";
+"label" = "label";
+"layer" = "layer";
+"• layers" = "• layers";
+
+// MARK: - Permissions / Onboarding
+"Photos access" = "Photos access";
+"photos access denied" = "photos access denied";
+"enable in Settings → Privacy → Photos" = "enable in Settings → Privacy → Photos";
+"photos must be deleted\nto create a cassette" = "photos must be deleted\nto create a cassette";
+"so we ask permission of photos" = "so we ask permission of photos";
+"allow" = "allow";
+"photos" = "photos";
+"AI music generation" = "AI music generation";
+"so we ask permission of ai usage" = "so we ask permission of ai usage";
+"Notifications" = "Notifications";
+"we can notify you when ai music" = "we can notify you when ai music";
+"generation is all finished" = "generation is all finished";
+
+// MARK: - Onboarding
+"learn more" = "learn more";
+"exit" = "exit";
+
+// MARK: - Loading
+"film processing" = "film processing";
+"winding your tape" = "winding your tape";
+
+// MARK: - Sign In
+"sign-in required" = "sign-in required";

@@ -213,11 +213,11 @@ class AppState: ObservableObject {
         options.isNetworkAccessAllowed = true
         options.isSynchronous = false
 
-        // 1080px 기준으로 리사이즈해서 요청
-        let targetSize = CGSize(width: 1080, height: 1080)
+        // 720px — 비디오 export 셀(~472px)보다 충분히 크고, 1080px 대비 저장/로드 속도 향상
+        let targetSize = CGSize(width: 720, height: 720)
         PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFit, options: options) { image, _ in
             guard let image,
-                  let jpegData = image.jpegData(compressionQuality: 0.75) else {
+                  let jpegData = image.jpegData(compressionQuality: 0.7) else {
                 completion(nil)
                 return
             }

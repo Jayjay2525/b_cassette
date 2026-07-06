@@ -398,6 +398,7 @@ struct CassetteShareScreen: View {
                     cassette: cassette,
                     backgroundColorHex: selectedColorHex,
                     musicStartRatio: musicDuration > 0 ? (musicStartTime * max(0, musicDuration - 15)) / musicDuration : 0,
+                    gridStartOffset: gridScrollOffset * (1080 / 270),
                     onProgress: { p in
                         await MainActor.run { exportProgress = p }
                     }

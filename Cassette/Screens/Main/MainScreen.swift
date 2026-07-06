@@ -514,7 +514,7 @@ struct CassetteStackLayer: View {
                             .resizable().scaledToFit()
                             .frame(width: arrowWidth)
                             .scaleEffect(1.05)
-                            .position(x: geo.size.width / 2 + 5, y: geo.size.height / 2 - 5)
+                            .position(x: geo.size.width / 2 + 2, y: geo.size.height / 2 - 5)
                             .opacity(circleActive ? 1 : 0)
                             .animation(.easeInOut(duration: 0.25), value: circleActive)
                             .zIndex(0)
@@ -601,7 +601,7 @@ struct CassetteStackLayer: View {
                                 Image("arrow_cassette")
                                     .resizable().scaledToFit()
                                     .frame(width: arrowWidth)
-                                    .position(x: geo.size.width / 2 + 5, y: geo.size.height / 2 - 5)
+                                    .position(x: geo.size.width / 2 + 2, y: geo.size.height / 2 - 5)
                                     .opacity(circleActive ? 1 : 0)
                                     .animation(.easeInOut(duration: 0.25), value: circleActive)
                                     .zIndex(0)
@@ -824,7 +824,7 @@ struct BottomInfoPanel: View {
                         .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
-                    Text("\(totalPhotos) photos")
+                    Text(String(format: NSLocalizedString("%d photos", comment: ""), totalPhotos))
                         .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
@@ -846,7 +846,7 @@ struct BottomInfoPanel: View {
                         .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
-                    Text("\(c.photos.count) photos")
+                    Text(String(format: NSLocalizedString("%d photos", comment: ""), c.photos.count))
                         .font(.appBody)
                         .foregroundColor(.appBlack)
                         .frame(height: 23)
@@ -857,7 +857,7 @@ struct BottomInfoPanel: View {
                         case .failed:
                             Text("generation failed")
                         case .completed:
-                            Text(c.isExpired ? "expired" : "\(c.daysLeft) days left")
+                            Text(c.isExpired ? "expired" : String(format: NSLocalizedString("%d days left", comment: ""), c.daysLeft))
                         }
                     }
                     .font(.custom("SF Mono", size: 13).monospaced())

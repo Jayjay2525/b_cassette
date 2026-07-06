@@ -1,0 +1,98 @@
+// MARK: - Main Screen
+"no cassettes yet!" = "아직 카세트가 없어요!";
+"add a new cassette" = "내 사진들로 카세트를";
+"with your b-cuts" = "만들어봐요";
+"cassette limit reached — delete one or upgrade your plan" = "카세트 한도에 도달했어요 — 삭제하거나 플랜을 업그레이드하세요";
+"delete cassette?" = "카세트를 삭제할까요?";
+"This cassette will be permanently deleted. This action can't be undone." = "이 카세트는 영구적으로 삭제됩니다. 되돌릴 수 없어요.";
+"delete" = "삭제";
+"cancel" = "취소";
+"help" = "문의";
+"retry" = "재시도";
+"generating..." = "생성 중...";
+"generation failed" = "생성 실패";
+"expired" = "만료됨";
+"terms of service" = "이용약관";
+
+// MARK: - Cassette Detail
+"Delete Cassette" = "카세트 삭제";
+"\"%@\" and all its photos will be permanently deleted. This cannot be undone." = "\"%@\"과 모든 사진이 영구적으로 삭제됩니다. 되돌릴 수 없어요.";
+"Delete" = "삭제";
+"Cancel" = "취소";
+"restore photos" = "사진 복구";
+"open photos" = "사진 앱 열기";
+"photos deleted within 30 days can be recovered.\ngo to Photos → Recently Deleted to restore them." = "삭제 후 30일 이내의 사진은 복구할 수 있어요.\n사진 앱 → 최근 삭제된 항목에서 복구하세요.";
+"revert" = "복구";
+"no b-cuts" = "b-cut 없음";
+"%d photos" = "%d장";
+"%d days left" = "%d일 남음";
+
+// MARK: - Share Screen
+"save video" = "동영상 저장";
+"instagram" = "인스타그램";
+"rendering..." = "렌더링 중...";
+
+// MARK: - New Cassette / Select
+"make a cassette" = "카세트 만들기";
+"make a film" = "필름 만들기";
+"select b-cuts" = "b-cut 선택";
+"select types" = "타입 선택";
+"loading photos..." = "사진 불러오는 중...";
+"select at least 5 images!" = "사진을 5장 이상 선택해주세요!";
+"next" = "다음";
+"done" = "완료";
+"skip" = "건너뛰기";
+"skip for now" = "지금은 건너뛰기";
+"leave" = "나가기";
+"Leave without saving?" = "저장하지 않고 나갈까요?";
+"Your cassette won't be saved." = "카세트가 저장되지 않아요.";
+
+// MARK: - Cassette Types
+"normal cassette" = "일반 카세트";
+"special cassette" = "스페셜 카세트";
+"cassette type" = "카세트 타입";
+"cassette background" = "카세트 배경";
+"b-cut from film" = "필름의 b-cut";
+"cassette is made by ai with film" = "AI가 필름으로 카세트를 만들어요";
+"films are made out of your b-cuts" = "b-cut으로 필름을 만들어요";
+"fitting music from\nai generation" = "AI가 어울리는\n음악을 생성해요";
+"random music from\nour library tracks" = "라이브러리에서\n랜덤 음악을 설정해요";
+"coming soon" = "준비 중";
+"coming\nsoon" = "준비 중";
+"free" = "무료";
+"free (3/3)" = "무료 (3/3)";
+
+// MARK: - Select Design
+"untitled" = "제목 없음";
+"describe the film" = "필름을 설명해주세요";
+"image" = "이미지";
+"text" = "텍스트";
+"sticker" = "스티커";
+"label" = "레이블";
+"layer" = "레이어";
+"• layers" = "• 레이어";
+
+// MARK: - Permissions / Onboarding
+"Photos access" = "사진 접근 권한";
+"photos access denied" = "사진 접근이 거부됐어요";
+"enable in Settings → Privacy → Photos" = "설정 → 개인 정보 보호 → 사진에서 허용해주세요";
+"photos must be deleted\nto create a cassette" = "카세트를 만들려면\n사진을 삭제해야 해요";
+"so we ask permission of photos" = "그래서 사진 접근 권한이 필요합니다";
+"allow" = "허용";
+"photos" = "사진";
+"AI music generation" = "AI 음악 생성";
+"so we ask permission of ai usage" = "그래서 AI 사용 권한이 필요합니다";
+"Notifications" = "알림";
+"we can notify you when ai music" = "AI 음악 생성이 완성되면";
+"generation is all finished" = "알림으로 알려드릴게요";
+
+// MARK: - Onboarding
+"learn more" = "더 알아보기";
+"exit" = "나가기";
+
+// MARK: - Loading
+"film processing" = "필름 인화 중";
+"winding your tape" = "테이프 마는 중";
+
+// MARK: - Sign In
+"sign-in required" = "로그인이 필요해요";
