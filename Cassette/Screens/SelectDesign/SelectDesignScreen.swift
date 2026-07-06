@@ -964,6 +964,13 @@ struct CassetteCanvasView: View {
                     .rotationEffect(item.rotation)
                     .offset(x: item.offset.width * s, y: item.offset.height * s)
             }
+
+            // 표면 굴곡 쉐이딩 — tape/cassette 이미지 위에 합성되므로 투명 배경 문제 없음
+            Image("cassette_multiply")
+                .resizable()
+                .scaledToFit()
+                .blendMode(.plusDarker)
+                .allowsHitTesting(false)
         }
         .frame(width: width)
         .modifier(CassetteMaskModifier(width: width, apply: applyMask))
