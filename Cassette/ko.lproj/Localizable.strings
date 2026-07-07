@@ -61,6 +61,7 @@
 "coming\nsoon" = "준비 중";
 "free" = "무료";
 "free (3/3)" = "무료 (3/3)";
+"free (%d/%d)" = "무료 (%d/%d)";
 
 // MARK: - Select Design
 "untitled" = "제목 없음";

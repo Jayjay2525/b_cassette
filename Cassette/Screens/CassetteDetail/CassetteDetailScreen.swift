@@ -333,12 +333,6 @@ struct CassetteDetailScreen: View {
     ///                                  right edge = screenWidth/2 + W/2 + offset
     /// - progress=0: left edge  = 0            (첫 사진이 화면 왼쪽 끝)
     /// - progress=1: right edge = screenWidth  (마지막 사진이 화면 오른쪽 끝에 딱 맞게)
-    private func filmOffset(screenWidth: CGFloat, totalFilmWidth: CGFloat) -> CGFloat {
-        let startOffset = totalFilmWidth / 2 - screenWidth / 2   // left edge  → 0
-        let endOffset   = screenWidth / 2 - totalFilmWidth / 2   // right edge → screenWidth
-        return startOffset + (endOffset - startOffset) * CGFloat(playProgress)
-    }
-
     private var filmStrip: some View {
         let bCuts = cassette.bCuts
         let photoWidth: CGFloat = filmPhotoWidth
@@ -361,31 +355,21 @@ struct CassetteDetailScreen: View {
                         .font(.appMicro)
                         .foregroundColor(.appWhite)
                 } else {
-                    let autoOffset = filmOffset(screenWidth: geo.size.width, totalFilmWidth: totalFilmWidth)
                     let startOffset = totalFilmWidth / 2 - geo.size.width / 2
                     let endOffset   = geo.size.width / 2 - totalFilmWidth / 2
-                    let minManual = endOffset - autoOffset
-                    let maxManual = startOffset - autoOffset
-                    let clampedManual = min(maxManual, max(minManual, filmManualOffset + filmDragTranslation))
+                    let clampedManual = min(startOffset, max(endOffset, filmManualOffset + filmDragTranslation))
                     HStack(spacing: gap) {
                         ForEach(bCuts) { photo in
                             BCutImageView(source: photo.imageSource, width: photoWidth, height: photoHeight)
                         }
                     }
-                    .offset(x: autoOffset + (isPlaying ? 0 : clampedManual))
-                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: playProgress)
+                    .offset(x: clampedManual)
                     .gesture(
                         DragGesture(minimumDistance: 4)
-                            .onChanged { v in
-                                if !isPlaying {
-                                    filmDragTranslation = v.translation.width
-                                }
-                            }
+                            .onChanged { v in filmDragTranslation = v.translation.width }
                             .onEnded { v in
-                                if !isPlaying {
-                                    filmManualOffset = min(maxManual, max(minManual, filmManualOffset + v.translation.width))
-                                    filmDragTranslation = 0
-                                }
+                                filmManualOffset = min(startOffset, max(endOffset, filmManualOffset + v.translation.width))
+                                filmDragTranslation = 0
                             }
                     )
                 }

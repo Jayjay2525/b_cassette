@@ -77,6 +77,7 @@ class SupabaseManager: ObservableObject {
                         appState.cassettes[i].trackName = localURL.lastPathComponent
                         appState.cassettes[i].status = .completed
                         print("[Supabase] cassette updated to completed, trackName: \(localURL.lastPathComponent)")
+                        sendCompletionNotification(cassetteName: appState.cassettes[i].name)
                     }
                 } else {
                     print("[Supabase] audio download failed")

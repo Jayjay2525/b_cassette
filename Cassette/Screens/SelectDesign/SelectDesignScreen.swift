@@ -887,6 +887,20 @@ struct SelectDesignScreen: View {
 
     @MainActor
     private func finishAndSave() async {
+        // Special cassette: 크레딧 차감 먼저 확인
+        if cassetteData.isSpecial {
+            guard let userID = AuthManager.shared.userID else {
+                print("[finishAndSave] no userID — cannot use special cassette")
+                return
+            }
+            let allowed = (try? await SupabaseManager.shared.checkAndIncrementCredit(userID: userID)) ?? false
+            guard allowed else {
+                print("[finishAndSave] special credit limit reached")
+                // TODO: 한도 초과 알럿 표시
+                return
+            }
+        }
+
         let ids = cassetteData.assetIDsToDelete
         let result = PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
         var assets: [PHAsset] = []

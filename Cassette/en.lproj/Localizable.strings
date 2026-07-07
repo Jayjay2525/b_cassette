@@ -61,6 +61,7 @@
 "coming\nsoon" = "coming\nsoon";
 "free" = "free";
 "free (3/3)" = "free (3/3)";
+"free (%d/%d)" = "free (%d/%d)";
 
 // MARK: - Select Design
 "untitled" = "untitled";

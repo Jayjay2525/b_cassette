@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct SelectTypePopup: View {
     @EnvironmentObject var appState: AppState
@@ -8,6 +9,11 @@ struct SelectTypePopup: View {
     let onSelect: (Bool) -> Void
 
     @State private var isSigningIn = false
+    @State private var usedCount: Int = 0
+
+    private let maxFreeSpecial = 3
+    private var remainingSpecial: Int { max(0, maxFreeSpecial - usedCount) }
+    private var isSpecialExhausted: Bool { remainingSpecial == 0 }
 
     var body: some View {
         ZStack {
@@ -73,17 +79,19 @@ struct SelectTypePopup: View {
                                     .font(.appMicro)
                                     .foregroundColor(.appWhite.opacity(0.7))
                                     .multilineTextAlignment(.center)
-                                Text("free (3/3)")
+                                Text(String(format: NSLocalizedString("free (%d/%d)", comment: ""), remainingSpecial, maxFreeSpecial))
                                     .font(.appBody)
                                     .foregroundColor(.appWhite.opacity(0.7))
                             }
                             .padding(.vertical, 10)
 
-                            Image("sparkles")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 233)
-                                .allowsHitTesting(false)
+                            if !isSpecialExhausted {
+                                Image("sparkles")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 233)
+                                    .allowsHitTesting(false)
+                            }
 
                             if isSigningIn {
                                 ProgressView()
@@ -91,18 +99,40 @@ struct SelectTypePopup: View {
                             }
                         }
                         .frame(width: 233, height: 124)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appBlack))
+                        .background(RoundedRectangle(cornerRadius: 12).fill(isSpecialExhausted ? Color.appGray : Color.appBlack))
                     }
-                    .disabled(isSigningIn)
+                    .disabled(isSigningIn || isSpecialExhausted)
 
-                    Text("sign-in required")
-                        .font(.appMicro)
-                        .foregroundColor(.appDarkGray)
+                    if !AuthManager.shared.isSignedIn {
+                        Text("sign-in required")
+                            .font(.appMicro)
+                            .foregroundColor(.appDarkGray)
+                    } else if isSpecialExhausted {
+                        Text("free chance all used!")
+                            .font(.appMicro)
+                            .foregroundColor(.appAccent)
+                    }
                 }
 
                 Spacer().frame(height: 8)
             }
             .frame(width: 313)
+        }
+        .onAppear { fetchUsedCount() }
+    }
+
+    private func fetchUsedCount() {
+        guard let userID = AuthManager.shared.userID else { return }
+        Task {
+            let response = try? await supabase
+                .from("special_credit")
+                .select("used_count")
+                .eq("user_id", value: userID.uuidString)
+                .single()
+                .execute()
+            let json = try? JSONSerialization.jsonObject(with: response?.data ?? Data()) as? [String: Any]
+            let count = json?["used_count"] as? Int ?? 0
+            await MainActor.run { usedCount = count }
         }
     }
 
@@ -115,7 +145,8 @@ struct SelectTypePopup: View {
                 do {
                     try await AuthManager.shared.signInWithApple()
                     isSigningIn = false
-                    onSelect(true)
+                    // 로그인 후 크레딧 확인만 하고 버튼을 다시 누르게 유도
+                    fetchUsedCount()
                 } catch {
                     isSigningIn = false
                     print("SignIn error: \(error)")
