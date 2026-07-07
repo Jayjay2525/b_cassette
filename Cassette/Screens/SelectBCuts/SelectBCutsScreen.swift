@@ -18,7 +18,15 @@ struct SelectBCutsScreen: View {
     @State private var navigateToDetail: Bool = false
     @State private var isProcessing: Bool = false
     @State private var processingProgress: Double = 0.0
+    @State private var showFilterSheet: Bool = false
+    @State private var activeFilter: PhotoFilter = .recent
     private let pageSize: Int = 100
+
+    enum PhotoFilter: String, CaseIterable {
+        case recent = "recent"
+        case favorites = "favorite"
+        case selfies = "selfie"
+    }
 
     private let mainWidth: CGFloat = 297
     private let sideWidth: CGFloat = 259
@@ -156,48 +164,102 @@ struct SelectBCutsScreen: View {
         .background(Color.appBackground.ignoresSafeArea())
 
         // ── 4. Control Bar (ZStack 최상단 고정) ──
-        HStack {
-            Button { withAnimation(.easeInOut(duration: 0.2)) { isGridMode.toggle() } } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.appWhite)
-                        .frame(width: 48, height: 48)
-                    Image(isGridMode ? "button_oneLayout" : "button_gridLayout")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                }
-            }
-
-            Spacer()
-
+        VStack(spacing: 12) {
             let isDisabled = cassetteData.selectedPhotos.count < 5
-            Button {
-                if isDisabled {
-                    withAnimation(.easeIn(duration: 0.2)) { showToast = true }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation(.easeOut(duration: 0.3)) { showToast = false }
-                    }
-                } else {
-                    startProcessing()
-                }
-            } label: {
-                Text("next")
-                    .font(.appBody)
-                    .foregroundColor(.appWhite)
-                    .frame(width: 201, height: 48)
-                    .background(Capsule().fill(isDisabled ? Color.appGray : Color.appDarkGray))
-            }
-            Spacer()
-
-            Text("\(cassetteData.selectedPhotos.count)/\(AppConstants.maxBCuts)")
-                .font(.appMicro)
+            Text("\(cassetteData.selectedPhotos.count) / \(AppConstants.maxBCuts)")
+                .font(.appBody)
                 .foregroundColor(isAtLimit ? .appAccent : .appBlack)
-                .frame(width: 48, height: 48)
-                .background(Circle().fill(Color.appWhite))
+                .frame(width: 92, height: 48)
+                .background(Capsule().fill(Color.appBackground))
+
+            HStack {
+                Button { withAnimation(.easeInOut(duration: 0.2)) { isGridMode.toggle() } } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.appWhite)
+                            .frame(width: 48, height: 48)
+                        Image(isGridMode ? "button_oneLayout" : "button_gridLayout")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    if isDisabled {
+                        withAnimation(.easeIn(duration: 0.2)) { showToast = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.3)) { showToast = false }
+                        }
+                    } else {
+                        startProcessing()
+                    }
+                } label: {
+                    Text("next")
+                        .font(.appBody)
+                        .foregroundColor(.appWhite)
+                        .frame(width: 201, height: 48)
+                        .background(Capsule().fill(isDisabled ? Color.appGray : Color.appDarkGray))
+                }
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showFilterSheet.toggle() }
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.appWhite)
+                            .frame(width: 48, height: 48)
+                        Image("button_sort")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                    }
+                }
+            }
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 11)
+
+        // 필터 팝업
+        if showFilterSheet {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(PhotoFilter.allCases, id: \.self) { filter in
+                    Button {
+                        applyFilter(filter)
+                        withAnimation(.easeInOut(duration: 0.15)) { showFilterSheet = false }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text(filter.rawValue)
+                                .font(.appMicro)
+                                .foregroundColor(.appBlack)
+                            Spacer()
+                            if activeFilter == filter {
+                                Image("checkmark_small")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 12, height: 12)
+                            }
+                        }
+                        .frame(height: 36)
+                    }
+                    if filter != PhotoFilter.allCases.last {
+                        Divider()
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(width: 120)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.appWhite))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .padding(.trailing, 24)
+            .padding(.bottom, 72)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomTrailing)))
+            .zIndex(998)
+        }
 
         // 토스트
         if showToast {
@@ -227,6 +289,9 @@ struct SelectBCutsScreen: View {
         }
         .navigationBarHidden(true)
         .onAppear { requestPhotoAccess() }
+        .onTapGesture {
+            if showFilterSheet { withAnimation(.easeInOut(duration: 0.15)) { showFilterSheet = false } }
+        }
         .alert("Leave without saving?", isPresented: $showExitAlert) {
             Button("leave", role: .destructive) { cassetteData.shouldDismiss = true }
             Button("cancel", role: .cancel) { }
@@ -383,12 +448,30 @@ struct SelectBCutsScreen: View {
         isLoadingMore = true
         let currentCount = assets.count
         let nextLimit = currentCount + pageSize
+        let filter = activeFilter
 
         DispatchQueue.global(qos: .userInitiated).async {
             let options = PHFetchOptions()
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.fetchLimit = nextLimit
-            let result = PHAsset.fetchAssets(with: .image, options: options)
+
+            let result: PHFetchResult<PHAsset>
+            switch filter {
+            case .recent:
+                options.fetchLimit = nextLimit
+                result = PHAsset.fetchAssets(with: .image, options: options)
+            case .favorites:
+                options.predicate = NSPredicate(format: "isFavorite == YES")
+                options.fetchLimit = nextLimit
+                result = PHAsset.fetchAssets(with: .image, options: options)
+            case .selfies:
+                let selfieAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumSelfPortraits, options: nil)
+                if let album = selfieAlbums.firstObject {
+                    options.fetchLimit = nextLimit
+                    result = PHAsset.fetchAssets(in: album, options: options)
+                } else {
+                    result = PHFetchResult<PHAsset>()
+                }
+            }
 
             var loaded: [PHAsset] = []
             result.enumerateObjects { asset, _, _ in loaded.append(asset) }
@@ -399,6 +482,14 @@ struct SelectBCutsScreen: View {
                 isLoadingMore = false
             }
         }
+    }
+
+    func applyFilter(_ filter: PhotoFilter) {
+        activeFilter = filter
+        assets = []
+        allLoaded = false
+        currentIndex = 0
+        loadMorePhotos()
     }
 }
 
