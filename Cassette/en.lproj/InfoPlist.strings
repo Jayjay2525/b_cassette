@@ -1,0 +1,3 @@
+NSPhotoLibraryUsageDescription = "Cassette accesses your photos to create your cassette tape.";
+NSPhotoLibraryAddOnlyUsageDescription = "Cassette saves your rendered video to your photo library.";
+NSUserNotificationUsageDescription = "Cassette notifies you when your AI music is ready.";

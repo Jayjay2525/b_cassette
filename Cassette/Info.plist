@@ -18,5 +18,11 @@
 	<array>
 		<string>instagram-stories</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cassette accesses your photos to create your cassette tape.</string>
+	<key>NSPhotoLibraryAddOnlyUsageDescription</key>
+	<string>Cassette saves your rendered video to your photo library.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Cassette notifies you when your AI music is ready.</string>
 </dict>
 </plist>

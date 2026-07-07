@@ -425,7 +425,7 @@ struct CassetteShareScreen: View {
     private func shareToInstagramStories(videoURL: URL) {
         // Instagram Stories URL scheme
         let pasteboardItems: [String: Any] = [
-            "com.instagram.sharedSticker.backgroundVideo": try! Data(contentsOf: videoURL)
+            "com.instagram.sharedSticker.backgroundVideo": (try? Data(contentsOf: videoURL)) ?? Data()
         ]
         UIPasteboard.general.setItems([pasteboardItems], options: [
             .expirationDate: Date().addingTimeInterval(60 * 5)
