@@ -726,8 +726,7 @@ struct UILayer: View {
                         } else {
                             Button("delete") { onDeleteCassette?() }
                                 .font(.appBody)
-                                .foregroundColor(mainCassette?.status == .generating ? .appGray : .appAccent)
-                                .disabled(mainCassette?.status == .generating)
+                                .foregroundColor(.appAccent)
                         }
                     } else {
                         Button("help") {

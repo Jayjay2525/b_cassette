@@ -2,7 +2,7 @@
 "no cassettes yet!" = "아직 카세트가 없어요!";
 "add a new cassette" = "내 사진들로 카세트를";
 "with your b-cuts" = "만들어봐요";
-"cassette limit reached — delete one or upgrade your plan" = "카세트 한도에 도달했어요 — 삭제하거나 플랜을 업그레이드하세요";
+"cassette limit reached — delete one or upgrade your plan" = "카세트 한도에 도달했어요 — 하나를 삭제하고 새로 만들어보세요";
 "delete cassette?" = "카세트를 삭제할까요?";
 "This cassette will be permanently deleted. This action can't be undone." = "이 카세트는 영구적으로 삭제됩니다. 되돌릴 수 없어요.";
 "delete" = "삭제";

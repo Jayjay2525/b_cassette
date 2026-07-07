@@ -8,8 +8,6 @@ enum Config {
         return val
     }
 
-    static var anthropicAPIKey: String { value(for: "ANTHROPIC_API_KEY") }
-    static var supabaseURL: String     { value(for: "SUPABASE_URL") }
-    static var supabaseKey: String     { value(for: "SUPABASE_PUBLISHABLE_KEY") }
-    static var musicGPTAPIKey: String  { value(for: "MUSICGPT_API_KEY") }
+    static var supabaseURL: String  { value(for: "SUPABASE_URL") }
+    static var supabaseKey: String  { value(for: "SUPABASE_PUBLISHABLE_KEY") }
 }

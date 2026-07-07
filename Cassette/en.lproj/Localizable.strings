@@ -2,7 +2,7 @@
 "no cassettes yet!" = "no cassettes yet!";
 "add a new cassette" = "add a new cassette";
 "with your b-cuts" = "with your b-cuts";
-"cassette limit reached — delete one or upgrade your plan" = "cassette limit reached — delete one or upgrade your plan";
+"cassette limit reached — delete one or upgrade your plan" = "cassette limit reached — delete one to make a new one";
 "delete cassette?" = "delete cassette?";
 "This cassette will be permanently deleted. This action can't be undone." = "This cassette will be permanently deleted. This action can't be undone.";
 "delete" = "delete";
