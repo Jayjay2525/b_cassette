@@ -9,6 +9,10 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>CutiveMono-Regular.ttf</string>
+		<string>MonaS12.otf</string>
+		<string>Caveat-VariableFont_wght.ttf</string>
+		<string>PatrickHand-Regular.ttf</string>
+		<string>Ink Lip Liquid Font.ttf</string>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

@@ -32,17 +32,25 @@ struct CassetteTextLayer: Identifiable {
 enum TextEditTab { case font, size, color }
 
 enum CassetteFont: String, CaseIterable {
-    case inspiration = "Inspiration"
-    case cutiveMono  = "Cutive Mono"
-    case pretendard  = "Pretendard"
+    case inspiration  = "Inspiration"
+    case cutiveMono   = "Cutive Mono"
+    case pretendard   = "Pretendard"
+    case mona         = "mona"
+    case caveat       = "caveat"
+    case patrickHand  = "patrick hand"
+    case inkLipLiquid = "ink lip liquid"
 
     var displayName: String { rawValue }
 
     func swiftUIFont(size: CGFloat) -> Font {
         switch self {
-        case .inspiration: return .custom("Inspiration", size: size)
-        case .cutiveMono:  return .custom("CutiveMono-Regular", size: size)
-        case .pretendard:  return .custom("Pretendard-Regular", size: size)
+        case .inspiration:  return .custom("Inspiration", size: size)
+        case .cutiveMono:   return .custom("CutiveMono-Regular", size: size)
+        case .pretendard:   return .custom("Pretendard-Regular", size: size)
+        case .mona:         return .custom("MonaS12", size: size)
+        case .caveat:       return .custom("Caveat", size: size)
+        case .patrickHand:  return .custom("PatrickHand-Regular", size: size)
+        case .inkLipLiquid: return .custom("THEFACESHOP INKLIPQUID", size: size)
         }
     }
 }
