@@ -649,7 +649,7 @@ struct UILayer: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 28, height: 28)
-                        .opacity(appState.cassettes.isEmpty ? 0.3 : 1.0)
+                        .opacity(appState.cassettes.isEmpty ? 0.3 : panelMode == .overall ? 0.4 : 1.0)
                 }
                 .disabled(appState.cassettes.isEmpty)
             }

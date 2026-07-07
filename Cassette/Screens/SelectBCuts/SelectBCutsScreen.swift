@@ -596,3 +596,4 @@ struct BCutPhotoCard: View {
         }
     }
 }
+
