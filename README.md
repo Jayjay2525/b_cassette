@@ -2,7 +2,7 @@
 
 A photo memory app inspired by cassette tapes — turn your everyday photos into A-cuts and B-cuts, scored with AI-generated music.
 
-> iOS app built with SwiftUI. Currently in App Store review.
+> iOS app built with SwiftUI. Currently in App Store.
 
 ## Features
 
