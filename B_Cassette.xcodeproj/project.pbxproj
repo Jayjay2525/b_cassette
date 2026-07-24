@@ -13,6 +13,7 @@
 		3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F32FE42B3400DE699D /* onboarding_2.json */; };
 		3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F52FE432A000DE699D /* onboarding_1.json */; };
 		3BA128FA2FE56A9700DE699D /* onboarding_3.json in Resources */ = {isa = PBXBuildFile; fileRef = 3BA128F92FE56A9700DE699D /* onboarding_3.json */; };
+		3BB00F7130135F070030F2BC /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3BB00F7030135F070030F2BC /* Secrets.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +38,7 @@
 		3BA128F32FE42B3400DE699D /* onboarding_2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_2.json; sourceTree = "<group>"; };
 		3BA128F52FE432A000DE699D /* onboarding_1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_1.json; sourceTree = "<group>"; };
 		3BA128F92FE56A9700DE699D /* onboarding_3.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_3.json; sourceTree = "<group>"; };
+		3BB00F7030135F070030F2BC /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		3BF1086E2FD6F94200E5B575 /* B_Cassette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = B_Cassette.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF1087B2FD6F94400E5B575 /* B_CassetteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BF108852FD6F94400E5B575 /* B_CassetteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = B_CassetteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -112,6 +114,7 @@
 				3BF1087E2FD6F94400E5B575 /* CassetteTests */,
 				3BF108882FD6F94400E5B575 /* CassetteUITests */,
 				3BF1086F2FD6F94200E5B575 /* Products */,
+				3BB00F7030135F070030F2BC /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -253,6 +256,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BB00F7130135F070030F2BC /* Secrets.xcconfig in Resources */,
 				3BA128FA2FE56A9700DE699D /* onboarding_3.json in Resources */,
 				3BA128F62FE432A000DE699D /* onboarding_1.json in Resources */,
 				3BA128F42FE42B3400DE699D /* onboarding_2.json in Resources */,
@@ -315,6 +319,7 @@
 /* Begin XCBuildConfiguration section */
 		3BF1088D2FD6F94400E5B575 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3BB00F7030135F070030F2BC /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -379,6 +384,7 @@
 		};
 		3BF1088E2FD6F94400E5B575 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3BB00F7030135F070030F2BC /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -441,7 +447,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = B_Cassette.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = AV42A7BZ8T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -481,7 +487,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = B_Cassette.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = AV42A7BZ8T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
