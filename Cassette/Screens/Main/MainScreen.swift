@@ -638,7 +638,7 @@ struct UILayer: View {
                     Image("button_plus")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 28, height: 28)
+                        .frame(width: 32, height: 32)
                         .opacity(appState.isFull ? 0.3 : 1.0)
                 }
 
@@ -648,7 +648,7 @@ struct UILayer: View {
                     Image("button_menu")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 28, height: 28)
+                        .frame(width: 32, height: 32)
                         .opacity(appState.cassettes.isEmpty ? 0.3 : panelMode == .overall ? 0.4 : 1.0)
                 }
                 .disabled(appState.cassettes.isEmpty)
@@ -687,7 +687,7 @@ struct UILayer: View {
                             .foregroundColor(.appBlack)
                     }
                     .frame(width: 6)
-                    .position(x: geo.size.width - 28, y: pinTop + (lineHeight + 6) / 2)
+                    .position(x: geo.size.width - 28, y: pinTop + (lineHeight + 6) / 2 + 8)
                     .opacity(!circleActive && panelVisible && !isEmpty ? 1 : 0)
                     .animation(.easeInOut(duration: 0.25), value: circleActive)
                     .animation(.easeInOut(duration: 0.25), value: isEmpty)
@@ -707,7 +707,7 @@ struct UILayer: View {
                             .foregroundColor(.appBlack)
                     }
                     .frame(width: 6)
-                    .position(x: geo.size.width / 2 + 30, y: lineEnd - pinMainHeight / 2)
+                    .position(x: geo.size.width / 2 + 30, y: lineEnd - pinMainHeight / 2 + 8)
                     .opacity(circleActive ? 1 : 0)
                     .animation(.easeInOut(duration: 0.25), value: circleActive)
                 }
@@ -722,11 +722,11 @@ struct UILayer: View {
                         if mainCassette?.status == .failed {
                             Button("retry") { onRetryCassette?() }
                                 .font(.appBody)
-                                .foregroundColor(.appAccent)
+                                .foregroundColor(.appWarnRed)
                         } else {
                             Button("delete") { onDeleteCassette?() }
                                 .font(.appBody)
-                                .foregroundColor(.appAccent)
+                                .foregroundColor(.appWarnRed)
                         }
                     } else {
                         Button("help") {
@@ -863,7 +863,7 @@ struct BottomInfoPanel: View {
                     .font(.custom("SF Mono", size: 13).monospaced())
                     .kerning(13 * 0.08)
                     .frame(height: 23)
-                    .foregroundColor(c.status == .completed ? (c.isExpired ? .appGray : .appAccent) : .appAccent)
+                    .foregroundColor(c.status == .completed ? (c.isExpired ? .appGray : .appWarnRed) : .appWarnRed)
                 }
             }
 

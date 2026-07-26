@@ -3,13 +3,12 @@ import SwiftUI
 // MARK: - Colors
 extension Color {
     static let appBackground  = Color(hex: "#DDDDDD")
-    static let appAccent      = Color(hex: "#FF2D2D")
-    static let appLightAccent = Color(hex: "#3D1A1A")
-    static let appWhite       = Color(hex: "#FFFFFF")
-    static let appBlack       = Color.black
+    static let appWarnRed     = Color(hex: "#FF2D2D")
+    static let appDarkRed     = Color(hex: "#3D1A1A")
+    static let appWhite       = Color(hex: "#F7F7F7")
+    static let appBlack       = Color(hex: "#111111")
     static let appGray        = Color(hex: "#B3B3B3")
     static let appDarkGray    = Color(hex: "#555555")
-    static let appLightGray    = Color(hex: "#F7F7F7")
 }
 
 extension Color {

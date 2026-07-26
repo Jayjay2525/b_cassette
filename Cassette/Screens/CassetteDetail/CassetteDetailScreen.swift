@@ -92,7 +92,7 @@ struct CassetteDetailScreen: View {
                 // 8. Days left
                 Text(cassette.isExpired ? "expired" : String(format: NSLocalizedString("%d days left", comment: ""), cassette.daysLeft))
                     .font(.appBody)
-                    .foregroundColor(cassette.isExpired ? .appDarkGray : .appAccent)
+                    .foregroundColor(cassette.isExpired ? .appDarkGray : .appWarnRed)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 16)
 
@@ -430,7 +430,7 @@ struct FlowLayout: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)
-                                .background(Capsule().fill(Color.appLightAccent))
+                                .background(Capsule().fill(Color.appDarkRed))
                         }
                     }
                 }

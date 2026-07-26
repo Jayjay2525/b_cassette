@@ -110,7 +110,7 @@ struct SelectTypePopup: View {
                     } else if isSpecialExhausted {
                         Text("free chance all used!")
                             .font(.appMicro)
-                            .foregroundColor(.appAccent)
+                            .foregroundColor(.appWarnRed)
                     }
                 }
 

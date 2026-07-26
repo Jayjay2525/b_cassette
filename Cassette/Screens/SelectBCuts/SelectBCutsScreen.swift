@@ -168,7 +168,7 @@ struct SelectBCutsScreen: View {
             let isDisabled = cassetteData.selectedPhotos.count < 5
             Text("\(cassetteData.selectedPhotos.count) / \(AppConstants.maxBCuts)")
                 .font(.appBody)
-                .foregroundColor(isAtLimit ? .appAccent : .appBlack)
+                .foregroundColor(isAtLimit ? .appWarnRed : .appBlack)
                 .frame(width: 92, height: 48)
                 .background(Capsule().fill(Color.appBackground))
 

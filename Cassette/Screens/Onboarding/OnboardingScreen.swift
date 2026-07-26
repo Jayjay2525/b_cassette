@@ -59,7 +59,7 @@ struct OnboardingScreen: View {
                         Button { handleAllow() } label: {
                             Text("allow")
                                 .font(.appBody)
-                                .foregroundColor(.appAccent)
+                                .foregroundColor(.appWarnRed)
                         }
                     }
                     .padding(.horizontal, 24)

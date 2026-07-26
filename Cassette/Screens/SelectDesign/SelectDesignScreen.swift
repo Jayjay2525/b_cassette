@@ -1124,14 +1124,14 @@ struct CassetteSelectPanel: View {
         .frame(height: 387)
         .clipped()
         .background(
-            Color.appLightGray
+            Color.appWhite
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: 16,
                     bottomLeadingRadius: 0,
                     bottomTrailingRadius: 0,
                     topTrailingRadius: 16
                 ))
-                .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: -4)
+                .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: -4)
                 .ignoresSafeArea(edges: .bottom)
         )
     }
