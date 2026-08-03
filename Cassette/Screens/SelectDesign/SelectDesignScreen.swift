@@ -150,7 +150,7 @@ struct SelectDesignScreen: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.appBackground.ignoresSafeArea()
+            Color.appLightGray.ignoresSafeArea()
 
             VStack(spacing: 0) {
 
@@ -1040,7 +1040,7 @@ struct CassetteSelectPanel: View {
                 HStack(spacing: 10) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.appBackground)
+                            .fill(Color.appLightGray)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .strokeBorder(Color.appBlack, lineWidth: 1.5)
@@ -1170,7 +1170,7 @@ struct TextEditPanel: View {
                 .padding(.top, 24)
             Spacer()
         }
-        .background(Color.appBackground.ignoresSafeArea())
+        .background(Color.appLightGray.ignoresSafeArea())
     }
 }
 
@@ -2161,9 +2161,9 @@ struct LayerPanelView: View {
                 } label: {
                     Image(isLocked ? "button_locked" : "button_unlocked")
                         .resizable()
-                        .frame(width: 16, height: 16)
+                        .frame(width: 24, height: 24)
                 }
-                .padding(.trailing, 8)
+                .padding(.trailing, 10)
             }
 
             // X 버튼
@@ -2172,7 +2172,7 @@ struct LayerPanelView: View {
             } label: {
                 Image("button_x")
                     .resizable()
-                    .frame(width: 16, height: 16)
+                    .frame(width: 24, height: 24)
             }
             .opacity(isBackground ? 0.3 : 1)
             .disabled(isBackground)
@@ -2207,7 +2207,7 @@ struct LayerPanelView: View {
 
             Image("button_x")
                 .resizable()
-                .frame(width: 16, height: 16)
+                .frame(width: 24, height: 24)
                 .opacity(0.3)
         }
         .contentShape(Rectangle())
